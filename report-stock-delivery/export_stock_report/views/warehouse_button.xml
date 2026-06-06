@@ -1,0 +1,15 @@
+<odoo>
+  <record id="view_warehouse_form_inherit_export" model="ir.ui.view">
+    <field name="name">stock.warehouse.form.export.report</field>
+    <field name="model">stock.warehouse</field>
+    <field name="inherit_id" ref="stock.view_warehouse_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//header" position="inside">
+        <button name="action_export_stock_report"
+                string="Export Stock Report"
+                type="object"
+                class="btn-primary"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>

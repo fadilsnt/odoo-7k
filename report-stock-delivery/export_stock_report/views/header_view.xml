@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+    <templates xml:space="preserve">
+
+        <t t-name="export_stock_report.UserMenu" t-extend="web.UserMenu">
+            <t t-jquery=".oe_topbar_name" t-operation="replace">
+                <small class="oe_topbar_name ms-2 text-start smaller lh-1 text-truncate d-lg-inline-block"
+                    style="max-width: 200px">
+                    <t t-esc="user.name"/>
+                </small>
+            </t>
+        </t>
+
+    </templates>
+</odoo>

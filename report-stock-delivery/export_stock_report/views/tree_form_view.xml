@@ -1,0 +1,55 @@
+<odoo>
+  <data>
+
+    <!-- ===================================================== -->
+    <!-- 1️⃣ Tree View: PENERIMAAN (Incoming) -->
+    <!-- ===================================================== -->
+    <record id="view_stock_vpicktree_inherit_incoming" model="ir.ui.view">
+      <field name="name">stock.vpicktree.inherit.incoming</field>
+      <field name="model">stock.picking</field>
+      <field name="inherit_id" ref="stock.vpicktree"/>
+      <field name="arch" type="xml">
+        <xpath expr="//field[@name='name']" position="before">
+          <field name="scheduled_date" optional="hide"/>
+          <field name="person_ids" optional="hide" string="Marketing"/>
+          <field name="owner_id" string="Customer (Penerimaan)" optional="hide"/>
+        </xpath>
+        <xpath expr="//field[@name='partner_id']" position="replace">
+          <field name="partner_id" string="Customer" optional="hide"/>
+        </xpath>
+      </field>
+    </record>
+
+
+    <!-- PENERIMAAN -->
+    <record id="view_picking_incoming_search_inherit" model="ir.ui.view">
+        <field name="name">stock.view_picking_incoming_search.inherit</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_internal_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="scheduled_date" string="Scheduled Date"/>
+                <field name="person_ids" string="Person"/>
+                <field name="owner_id" string="Customer (Penerimaan)"/>
+                <field name="partner_id" string="Customer"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="inherit_product_template_kanban_stock_view" model="ir.ui.view">
+        <field name="name">inherit.product.template.kanban.stock.view</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="stock.product_template_kanban_stock_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban" position="inside">
+                <field name="show_on_hand_qty_status_button"/>
+            </xpath>
+            <xpath expr="//field[@name='product_properties']" position="before">
+                <div t-if="record.show_on_hand_qty_status_button.raw_value">
+                    Forecasted: <field name="virtual_available"/> <field name="uom_id" groups="uom.group_uom"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+  </data>
+</odoo>

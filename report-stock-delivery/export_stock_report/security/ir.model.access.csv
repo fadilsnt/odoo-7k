@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_export_stock_wizard,access.export.stock.wizard,model_export_stock_wizard,,1,1,1,1
+access_pengiriman_wizard,access.pengiriman.wizard,model_pengiriman_report_wizard,,1,1,1,1
+access_cek_cl_wizard,access.cek.cl.wizard,model_report_cek_cl_wizard,,1,1,1,1
+access_wizard_laporan_persediaan_user,export_stock_report.wizard.laporan.persediaan,model_wizard_laporan_persediaan,base.group_user,1,1,1,1

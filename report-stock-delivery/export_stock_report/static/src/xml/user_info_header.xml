@@ -1,0 +1,7 @@
+<odoo>
+    <template id="assets_backend" inherit_id="web.assets_backend">
+        <xpath expr="." position="inside">
+            <script type="module" src="/export_stock_report/static/src/js/user_info_header.js"/>
+        </xpath>
+    </template>
+</odoo>

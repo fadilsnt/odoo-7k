@@ -1,0 +1,129 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <template id="bukti_terima_barang_header_inventory">
+        <div class="header border p-1">
+            <div class="row d-flex align-items-center">
+                <div class="col-2">
+                    <t t-if="docs.company_id.logo">
+                        <img t-att-src="image_data_uri(o.company_id.logo)" width="70px"/>
+                    </t>                    
+                </div>
+                <div class="col-1 text-center">
+                    <h4>/BTB</h4>
+                </div>
+                <div class="col-6 text-center fw-300">
+                    <h3 style="font-weight: bold;">BUKTI TERIMA BARANG</h3>
+                </div>
+                <div class="col-1"></div>
+                <div class="col-2">
+                    <p>
+                        FM - PN - 01<br />
+                        REV. 00
+                    </p>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="bukti_terima_barang_body_inventory">
+        <div class="page">
+            <table class="detail-document w-100 table-borderless border p-1">
+                <tr>
+                    <td style="width:18%; padding-left: 50px;">No. BTB</td>
+                    <td style="width:2%;">:</td>
+                    <td style="width:32%;"><t t-esc="o.btb_number"/></td>
+                    <td style="width:12%;">Jam</td>
+                    <td style="width:2%;">:</td>
+                    <td style="width:34%;">
+                        <span t-if="o.scheduled_date" t-esc="context_timestamp(o.scheduled_date).strftime('%H:%M:%S')"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding-left: 50px;">No. PO</td>
+                    <td>:</td>
+                    <td><t t-esc="o.origin"/></td>
+                    <td>Nama Supplier</td>
+                    <td>:</td>
+                    <td><t t-esc="o.partner_id.name"/></td>
+                </tr>
+                <tr>
+                    <td style="padding-left: 50px;">No. SJ/No. Pol.</td>
+                    <td>:</td>
+                    <td>
+                        <t t-esc="o.partner_ref"/>           
+                    </td>
+                    <td>Tanggal</td>
+                    <td>:</td>
+                    <td>
+                        <span t-if="o.scheduled_date" t-esc="o.scheduled_date.strftime('%d/%m/%Y')"/>
+                    </td>
+                </tr>
+            </table>
+
+            <table class="detail-product-line w-100">
+                <tr>
+                    <th class="p-1" style="font-weight: bold; width: 4%;">No</th>
+                    <th class="p-1" style="font-weight: bold; width: 30%;">Nama Barang</th>
+                    <th class="p-1" style="font-weight: bold; width: 30%;">Keterangan</th>
+                    <th class="p-1" style="font-weight: bold; width: 18%;">Qty</th>
+                    <th class="p-1" style="font-weight: bold; width: 18%;">Satuan</th>
+                </tr>
+
+                <t t-set="max_line" t-value="9"/>
+                <t t-set="lines" t-value="o.move_ids_without_package"/>
+
+                <t t-foreach="range(max_line)" t-as="i">
+                    <tr>
+                        <t t-if="i &lt; len(lines)">
+                            <td class="p-1 text-center"><t t-esc="i+1"/></td>
+                            <td class="p-1 text-left"><t t-esc="lines[i].name"/></td>
+                            <td class="p-1 text-left"><t t-esc="lines[i].description_picking"/></td>
+                            <td class="p-1 text-center"><t t-esc="'{:,.0f}'.format(lines[i].quantity or 0).replace(',', '.')"/></td>
+                            <td class="p-1 text-center"><t t-esc="lines[i].product_uom.name"/></td>
+                        </t>
+                        <t t-else="">
+                            <td class="p-1"><br /></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"></td>
+                            <td class="p-1"></td>
+                        </t>
+                    </tr>
+                </t>
+            </table>
+
+            <table class="table-signature w-100 table-borderless border">
+                <tr>
+                    <th class="w-25" style="padding: 20px 0px">Bag. Produksi,</th>
+                    <th class="w-25" style="padding: 20px 0px">Bag. Produksi,</th>
+                    <th class="w-25" style="padding: 20px 0px">Bag. Pembelian,</th>
+                    <th class="w-25" style="padding: 20px 0px">Bag. Penerimaan,</th>
+                </tr>
+                <tr>
+                    <td style="height: 68px;"></td>
+                    <td style="height: 68px;"></td>
+                    <td style="height: 68px;"></td>
+                    <td style="height: 68px;"></td>
+                </tr>
+                <tr>
+                    <td style="padding: 0px 0px 20px 0px" class="text-center">(.......................................................)</td>
+                    <td style="padding: 0px 0px 20px 0px" class="text-center">(.......................................................)</td>
+                    <td style="padding: 0px 0px 20px 0px" class="text-center">(.......................................................)</td>
+                    <td style="padding: 0px 0px 20px 0px" class="text-center">(.......................................................)</td>
+                </tr>
+            </table>
+
+        </div>        
+    </template>
+
+    <template id="bukti_terima_barang_pdf_report_inventory">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.basic_layout">
+                    <t t-call="hd_inventory_custom.bukti_terima_barang_header_inventory"/>
+                    <t t-call="hd_inventory_custom.bukti_terima_barang_body_inventory"/>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,27 @@
+<odoo>
+    <record id="view_picking_form_inherit_sales_person" model="ir.ui.view">
+        <field name="name">stock.picking.form.inherit.sales.person</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <!-- Tambah field sales_person_id di group yang ada user_id -->
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="sales_person_ids" invisible="1"/>
+                <field name="person_ids" readonly="state != 'draft'"/>
+            </xpath>
+
+            <xpath expr="//field[@name='move_ids_without_package']/list/field[@name='name']"
+             position="before">
+                <field name="no_cont"
+                    attrs="{'invisible': [('picking_type_code','!=','internal')]}" optional="hide"/>
+            </xpath>
+
+            <!-- keterangan sebelum product_uom -->
+            <xpath expr="//field[@name='move_ids_without_package']/list/field[@name='product_uom']"
+                    position="before">
+                <field name="keterangan"
+                    attrs="{'invisible': [('picking_type_code','!=','internal')]}" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,404 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* export_stock_report
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0-20250218\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-04 04:24+0000\n"
+"PO-Revision-Date: 2025-11-04 04:24+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid ""
+"<br/>\n"
+"                            PER TANGGAL"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+msgid ""
+"<br/>\n"
+"              PER TANGGAL"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields.selection,name:export_stock_report.selection__export_stock_wizard__kategori_selection__all
+#: model:ir.model.fields.selection,name:export_stock_report.selection__pengiriman_report_wizard__kategori_selection__all
+#: model:ir.model.fields.selection,name:export_stock_report.selection__stock_report_wizard__kategori_selection__all
+msgid "All"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "BOX"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "Box"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "CONT"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "CUSTOMER :"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_dalam_pengirimana_wizard_form
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_export_stock_wizard_form
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_stock_report_wizard_form
+msgid "Cancel"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "Cont"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__create_uid
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__create_uid
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__create_uid
+msgid "Created by"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__create_date
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__create_date
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "Customer"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "DESGN / GRD"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.ui.menu,name:export_stock_report.menu_dalam_pengiriman_report
+msgid "Laporan Dalam Perjalanan"
+msgstr "In Transit Report"
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "Design"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__display_name
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__display_name
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__display_name
+msgid "Display Name"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "ETA"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "ETD"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__end_date
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__end_date
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__end_date
+msgid "End Date"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields.selection,name:export_stock_report.selection__export_stock_wizard__kategori_selection__export
+#: model:ir.model.fields.selection,name:export_stock_report.selection__pengiriman_report_wizard__kategori_selection__export
+#: model:ir.model.fields.selection,name:export_stock_report.selection__stock_report_wizard__kategori_selection__export
+msgid "Export"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.ui.menu,name:export_stock_report.menu_export_stock_report
+msgid "Laporan Pengiriman"
+msgstr "Delivery Report"
+
+#. module: export_stock_report
+#: model:ir.actions.act_window,name:export_stock_report.action_export_stock_wizard
+#: model:ir.actions.report,name:export_stock_report.action_export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_export_stock_wizard_form
+msgid "Export Stock Report"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model,name:export_stock_report.model_export_stock_wizard
+msgid "Export Stock Report Wizard"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "GRAND TOTAL"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid ""
+"GRAND TOTAL PER CUSTOMER<br/>\n"
+"                        PER TANGGAL"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "Grade"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__id
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__id
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__id
+msgid "ID"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__kategori_selection
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__kategori_selection
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__kategori_selection
+msgid "Kategori"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "Ket"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,help:export_stock_report.field_pengiriman_report_wizard__warehouse_ids
+#: model:ir.model.fields,help:export_stock_report.field_stock_report_wizard__warehouse_ids
+msgid "Kosongkan untuk semua warehouse"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__write_uid
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__write_uid
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__write_date
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__write_date
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields.selection,name:export_stock_report.selection__export_stock_wizard__kategori_selection__lokal
+#: model:ir.model.fields.selection,name:export_stock_report.selection__pengiriman_report_wizard__kategori_selection__lokal
+#: model:ir.model.fields.selection,name:export_stock_report.selection__stock_report_wizard__kategori_selection__lokal
+msgid "Lokal"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "No"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "No. Cont"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.ui.menu,name:export_stock_report.menu_persedian_report
+msgid "Laporan Stock Persediaan"
+msgstr "Stock Inventory Report"
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_export_stock_wizard_form
+msgid "Print"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_dalam_pengirimana_wizard_form
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_stock_report_wizard_form
+msgid "Print Report"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "Product"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "Qty"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "REPORT PERSEDIAAN BARANG"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.actions.report,name:export_stock_report.action_report_stock_by_warehouse
+msgid "Report Persediaan"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.actions.report,name:export_stock_report.action_report_dalam_pengiriman
+msgid "Report dalam Pengiriman"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.actions.act_window,name:export_stock_report.action_report_pengiriman_wizard
+msgid "Report dalam pengiriman wizard"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_picking__person_ids
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_picking__sales_person_id
+msgid "Sales Person"
+msgstr ""
+
+#. module: export_stock_report
+#. odoo-python
+#: code:addons/export_stock_report/models/delivery_form.py:0
+msgid ""
+"Sales Person '%s' tidak sesuai untuk produk '%s'. Produk ini hanya boleh "
+"diproses oleh: %s"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__sales_person_ids
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__sales_person_ids
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__sales_person_ids
+msgid "Sales Persons"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "Salesperson"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__start_date
+msgid "Start Date"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model,name:export_stock_report.model_report_export_stock_report_stock_report_pengiriman
+msgid "Stock Report Dalam Pengiriman (Internal Transfer - Ready)"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_dalam_pengirimana_wizard_form
+#: model_terms:ir.ui.view,arch_db:export_stock_report.view_stock_report_wizard_form
+msgid "Stock Report Wizard"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.actions.act_window,name:export_stock_report.action_stock_report_wizard
+#: model:ir.model,name:export_stock_report.model_report_export_stock_report_stock_report_template
+msgid "Stock Report by Warehouse"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "TOTAL"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "TOTAL / DESIGN"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+msgid "TOTAL KESELURUHAN PER WAREHOUSE"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "TOTAL STOK BOX EXPORT DALAM PERJALANAN"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+msgid "TOTAL STOK EXPORT"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_template
+msgid "Total"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+msgid "Total Count (BOX)"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model,name:export_stock_report.model_stock_picking
+msgid "Transfer"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "Tujuan"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "WAREHOUSE"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_pengiriman_report_wizard__warehouse_ids
+#: model:ir.model.fields,field_description:export_stock_report.field_stock_report_wizard__warehouse_ids
+#: model_terms:ir.ui.view,arch_db:export_stock_report.report_export_stock
+msgid "Warehouse"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model.fields,field_description:export_stock_report.field_export_stock_wizard__warehouse_ids
+msgid "Warehouses"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model,name:export_stock_report.model_pengiriman_report_wizard
+msgid "Wizard Pengiriman Report by Warehouse"
+msgstr ""
+
+#. module: export_stock_report
+#: model:ir.model,name:export_stock_report.model_stock_report_wizard
+msgid "Wizard Stock Report by Warehouse"
+msgstr ""
+
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.stock_report_pengiriman
+msgid "per tanggal"
+msgstr ""

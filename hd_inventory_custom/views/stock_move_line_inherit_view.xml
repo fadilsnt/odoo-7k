@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+  <record id="stock_move_line_view_inherit_hd_inventory_custom" model="ir.ui.view">
+    <field name="name">stock.move.line.view.inherit.hd.inventory.custom</field>
+    <field name="model">stock.move.line</field>
+    <field name="inherit_id" ref="stock.view_stock_move_line_operation_tree"/>
+    <field name="arch" type="xml">
+      <xpath expr="//list//field[@name='quantity']" position="after">
+        <field name="tonase_asli" />
+        <field name="oven_number" />
+        <field name="production_date" />
+      </xpath>
+      <xpath expr="//list" position="inside">
+        <field name="line_packing" optional="hide"/>
+        <field name="camp_tgl_briket" optional="hide"/>
+        <field name="briket_tgu" optional="hide"/>
+        <field name="shift_briket" optional="hide"/>
+        <field name="bkr" optional="hide"/>
+        <field name="pembakar_penutup" optional="hide"/>
+        <field name="asumsi_berat_ikat" optional="hide"/>
+        <field name="lubang_setom" />
+        <field name="bongkaran" />
+        <field name="from_wizard" optional="hide"/>
+      </xpath>      
+    </field>
+  </record>
+
+  <record id="stock_move_line_view_form_inherit_hd_inventory_custom" model="ir.ui.view">
+    <field name="name">stock.move.line.view.form.inherit.hd.inventory.custom</field>
+    <field name="model">stock.move.line</field>
+    <field name="inherit_id" ref="stock.view_move_line_tree"/>
+    <field name="arch" type="xml">
+        <xpath expr="//field[@name='quantity']" position="after">
+            <field name="tonase_asli" string="Tonase Asli"
+                decoration-danger="(location_usage in ('internal','transit')) and (location_dest_usage not in ('internal','transit'))"
+                decoration-success="(location_usage not in ('internal','transit')) and (location_dest_usage in ('internal','transit'))"/>
+        </xpath>
+    </field>
+  </record>
+</odoo>

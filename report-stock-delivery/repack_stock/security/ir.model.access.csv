@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+
+access_stock_repack_line_user,stock.repack.line user,model_stock_repack_line,,1,1,1,1
+access_stock_repack_output_user,stock.repack.output user,model_stock_repack_output,,1,1,1,1
+

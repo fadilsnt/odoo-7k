@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_wizard_laporan_sparepart_bulanan_form" model="ir.ui.view">
+        <field name="name">wizard.laporan.sparepart.bulanan.form</field>
+        <field name="model">wizard.laporan.sparepart.bulanan</field>
+        <field name="arch" type="xml">
+            <form string="Laporan Sparepart Bulanan">
+                <group>
+                    <group>
+                        <label for="warehouse_id"/>
+                        <div class="o_row">
+                            <field name="warehouse_id" widget="many2many_tags" invisible="is_all_warehouse"/>
+                            <div class="alert alert-warning py-1 px-2 mb-0" invisible="not is_all_warehouse"><i class="fa fa-info-circle me-1"/>
+                                All warehouses will be included in the report.
+                            </div>
+                            <field name="is_all_warehouse"/>
+                        </div>
+                    </group>
+                    <group>
+                        <label for="start_date" string="Date"/>
+                        <div class="o_row">
+                            <field name="start_date" string="Date" required="True" widget="daterange" options="{'end_date_field': 'end_date'}" />
+                            <field name="end_date" required="True" invisible="1"/>
+                        </div>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_print_report" type="object" string="Print Report" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_wizard_laporan_sparepart_bulanan" model="ir.actions.act_window">
+        <field name="name">Laporan Sparepart Bulanan</field>
+        <field name="res_model">wizard.laporan.sparepart.bulanan</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_laporan_sparepart" name="Laporan Sparepart" parent="export_stock_report.menu_print_stock_report" action="action_wizard_laporan_sparepart_bulanan"/>
+</odoo>

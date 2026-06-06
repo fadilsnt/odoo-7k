@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_product_stock_tree_inherit_hd_inventory_custom" model="ir.ui.view">
+        <field name="name">product.product.stock.tree.inherit.hd.inventory.custom</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="stock.product_product_stock_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='virtual_available']" position="before">
+                <field name="tonase_asli_available_qty" string="Tonase On Hand" optional="show" sum="Total Tonase On Hand"/>
+                <field name="tonase_asli_free_qty" string="Tonase Free to Use" optional="show" sum="Total Tonase Free"/>
+                <field name="tonase_asli_incoming_qty" string="Tonase Incoming" optional="hide" sum="Total Incoming Tonase"/>
+                <field name="tonase_asli_outgoing_qty" string="Tonase Outgoing" optional="hide" sum="Total Outgoing Tonase"/>
+            </xpath>
+        </field>
+    </record>    
+</odoo>

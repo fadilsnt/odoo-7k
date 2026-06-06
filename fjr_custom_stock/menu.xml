@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem
+        id="product_grade_menu"
+        action="product_grade_action"
+        parent="stock.menu_product_in_config_stock"
+        sequence="10"/>
+
+</odoo>

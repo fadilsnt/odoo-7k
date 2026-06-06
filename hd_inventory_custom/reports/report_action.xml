@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="inventory_laporan_hari_pengganti_xlsx" model="ir.actions.report">
+        <field name="name">Laporan Inventory Hari Pengganti Report</field>
+        <field name="model">wizard.inventory.laporan.hari.pengganti</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">hd_inventory_custom.hari_pengganti_xlsx</field>
+        <field name="report_file">Laporan_Inventory_Hari_Pengganti</field>
+    </record>
+
+    <record id="inventory_laporan_hari_pengganti_tonase_base_xlsx" model="ir.actions.report">
+        <field name="name">Laporan Inventory Tonase Hari Pengganti Report</field>
+        <field name="model">wizard.inventory.laporan.hari.pengganti</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">hd_inventory_custom.inventory_laporan_hari_pengganti_ton</field>
+        <field name="report_file">Laporan_Inventory_Hari_Pengganti_Tonase</field>
+    </record>
+
+    <record id="action_report_bukti_terima_barang" model="ir.actions.report">
+        <field name="name">Bukti Terima Barang</field>
+        <field name="model">purchase.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hd_inventory_custom.bukti_terima_barang_pdf_report</field>
+        <field name="report_file">hd_inventory_custom.bukti_terima_barang_pdf_report</field>
+        <field name="print_report_name">
+            'Bukti Terima Barang %s - %s' % (
+                (str(object.btb_number).replace('/', '-') if object.btb_number else object.name),
+                object.name
+            )
+        </field>
+        <field name="paperformat_id" ref="hd_inventory_custom.paperformat_bukti_terima_barang"/>
+        <field name="binding_model_id" ref="purchase.model_purchase_order"/>
+        <field name="binding_type">report</field>
+    </record>    
+
+    <record id="action_report_bukti_terima_barang_inventory" model="ir.actions.report">
+        <field name="name">Bukti Terima Barang Inventory</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">hd_inventory_custom.bukti_terima_barang_pdf_report_inventory</field>
+        <field name="report_file">hd_inventory_custom.bukti_terima_barang_pdf_report_inventory</field>
+        <field name="print_report_name">
+            'Bukti Terima Barang %s' % (
+                str(object.btb_number).replace('/', '-') if object.btb_number else object.name
+            )
+        </field>
+        <field name="paperformat_id" ref="hd_inventory_custom.paperformat_bukti_terima_barang_inventory"/>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+    </record>     
+
+    <record id="report_laporan_sparepart_xlsx" model="ir.actions.report">
+        <field name="name">Laporan Sparepart XLSX</field>
+        <field name="model">wizard.laporan.sparepart.bulanan</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">hd_inventory_custom.report_laporan_sparepart_xlsx</field>
+        <field name="report_file">laporan_sparepart</field>
+        <field name="binding_model_id" ref="model_wizard_laporan_sparepart_bulanan"/>
+    </record>    
+</odoo>

@@ -1,0 +1,131 @@
+<odoo>
+  <template id="stock_report_pengiriman">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="wizard">
+
+        <div class="page" style="font-family:Arial, sans-serif; color:#000;">
+          <h2 style="text-align:center; font-weight:bold; margin-bottom:5px;">
+            TOTAL STOK BOX EXPORT DALAM PERJALANAN
+          </h2>
+          <h3 style="text-align:center; margin-top:0;">
+            per tanggal
+            <t t-esc="time.strftime('%d-%m-%Y', time.strptime(str(wizard.end_date), '%Y-%m-%d'))"/>
+          </h3>
+
+          <t t-foreach="result.items()" t-as="wh">
+            <t t-set="warehouse" t-value="wh[0]"/>
+            <t t-set="data_warehouse" t-value="wh[1]"/>
+
+            <h4 style="margin-top:25px; text-transform:uppercase; border-bottom:2px solid #444;">
+              WAREHOUSE <t t-esc="warehouse"/>
+            </h4>
+
+            <!-- ====================== TABLE DETAIL ====================== -->
+            <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; text-align:center;border:1px solid #000;">
+              <thead>
+                <tr style="background-color:#d9d9d9; border:1px solid #999;">
+                  <th style="border:1px solid #000;">No</th>
+                  <th style="text-align:left;border:1px solid #000;">No. Cont</th>
+                  <th style="border:1px solid #000;">ETD</th>
+                  <th style="border:1px solid #000;">ETA</th>
+                  <th style="text-align:left;border:1px solid #000;">Design</th>
+                  <th style="border:1px solid #000;">Grade</th>
+                  <th style="border:1px solid #000;">Qty</th>
+                  <th style="border:1px solid #000;">Tujuan</th>
+                  <th style="border:1px solid #000;">Ket</th>
+                </tr>
+              </thead>
+              <tbody>
+                <t t-set="no" t-value="1"/>
+                <t t-set="total_qty" t-value="0"/>
+
+                <t t-foreach="data_warehouse.items()" t-as="design_item">
+                  <t t-set="grade_dict" t-value="design_item[1]"/>
+
+                  <t t-foreach="grade_dict.items()" t-as="grade_item">
+                    <t t-set="cont_dict" t-value="grade_item[1]"/>
+
+                    <t t-foreach="cont_dict.items()" t-as="cont_item">
+                      <t t-set="line" t-value="cont_item[1]"/>
+
+                      <tr>
+                        <td style="border:1px solid #000;"><t t-esc="no"/></td>
+                        <td style="text-align:left;border:1px solid #000;"><t t-esc="line['origin']"/></td>
+                        <td style="border:1px solid #000;"></td>
+                        <td style="border:1px solid #000;"></td>
+                        <td style="text-align:left;border:1px solid #000;"><t t-esc="line['product']"/></td>
+                        <td style="border:1px solid #000;"><t t-esc="line['grade']"/></td>
+                        <td style="border:1px solid #000;">
+                          <t t-esc="('{:,.0f}'.format(line['qty'])).replace(',', '.')"/>
+                        </td>
+                        <td style="border:1px solid #000;"><t t-esc="line['destination']"/></td>
+                        <td style="border:1px solid #000;"><t t-esc="line['ket']"/></td>
+                      </tr>
+
+                      <t t-set="total_qty" t-value="total_qty + line['qty']"/>
+                      <t t-set="no" t-value="no + 1"/>
+                    </t>
+                  </t>
+                </t>
+
+                <tr style="font-weight:bold; background-color:#f0f0f0;">
+                  <td colspan="6" style="border:1px solid #000;">TOTAL</td>
+                  <td style="border:1px solid #000;">
+                    <t t-esc="('{:,.0f}'.format(total_qty)).replace(',', '.')"/>
+                  </td>
+                  <td colspan="2" style="border:1px solid #000;"></td>
+                </tr>
+              </tbody>
+
+            </table>
+
+            <!-- ====================== TABLE TOTAL PER DESIGN ====================== -->
+            <div style="margin-top:20px;">
+              <h5 style="font-weight:bold;">TOTAL / DESIGN</h5>
+              <table style="width:60%; border-collapse:collapse; font-size:12px; text-align:center;border:1px solid #000;">
+                <thead>
+                  <tr style="background-color:#d9d9d9;">
+                    <th style="text-align:left;border:1px solid #000;">DESIGN / GRADE</th>
+                    <th style="border:1px solid #000;">BOX</th>
+                    <th style="border:1px solid #000;">CONT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <t t-set="grand_box" t-value="0"/>
+                  <t t-set="grand_cont" t-value="0"/>
+
+                  <t t-foreach="total_per_design[warehouse]" t-as="tline">
+                    <tr>
+                      <td style="text-align:left;border:1px solid #000;"><t t-esc="tline['design']"/></td>
+                      <td style="border:1px solid #000;">
+                        <t t-esc="('{:,.0f}'.format(tline['total_box'])).replace(',', '.')"/>
+                      </td>
+                      <td style="text-align:center;border:1px solid #000;">
+                        <t t-esc="('{:,.2f}'.format(tline['total_cont']))
+                          .replace(',', 'X').replace('.', ',').replace('X', '.')"/>
+                      </td>
+                    </tr>
+                    <t t-set="grand_box" t-value="grand_box + tline['total_box']"/>
+                    <t t-set="grand_cont" t-value="grand_cont + tline['total_cont']"/>
+                  </t>
+
+                  <tr style="font-weight:bold; background-color:#f0f0f0;">
+                    <td style="border:1px solid #000;">TOTAL</td>
+                    <td style="border:1px solid #000;">
+                      <t t-esc="('{:,.0f}'.format(grand_box)).replace(',', '.')"/>
+                    </td>
+                    <td style="border:1px solid #000;">
+                      <t t-esc="('{:,.2f}'.format(grand_cont))
+                        .replace(',', 'X').replace('.', ',').replace('X', '.')"/>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </t>
+        </div>
+      </t>
+    </t>
+  </template>
+</odoo>

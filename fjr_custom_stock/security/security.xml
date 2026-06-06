@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- GROUP (sudah ada di Anda, biarkan id & nama sama) -->
+    <record id="group_customer_product_limited" model="res.groups">
+        <field name="name">Customer: Limit Product Visibility</field>
+        <field name="category_id" ref="base.module_category_hidden"/>
+    </record>
+
+    <!-- ==== PRODUK ==== -->
+    <!-- product.template: hanya template yang sales_person_ids mengandung user -->
+    <record id="rule_product_template_customer_only_own" model="ir.rule">
+        <field name="name">Product Template: only own by sales_person</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="domain_force">[('sales_person_ids','in',[user.id])]</field>
+        <field name="groups" eval="[(4, ref('fjr_custom_stock.group_customer_product_limited'))]"/>
+        <field name="perm_read" eval="1"/>
+        <field name="perm_write" eval="1"/>
+        <field name="perm_create" eval="0"/>
+        <field name="perm_unlink" eval="0"/>
+    </record>
+
+    <!-- product.product (variant) ikut dibatasi -->
+    <record id="rule_product_product_customer_only_own" model="ir.rule">
+        <field name="name">Product Variant: only own by sales_person</field>
+        <field name="model_id" ref="product.model_product_product"/>
+        <field name="domain_force">[('product_tmpl_id.sales_person_ids','in',[user.id])]</field>
+        <field name="groups" eval="[(4, ref('fjr_custom_stock.group_customer_product_limited'))]"/>
+        <field name="perm_read" eval="1"/>
+        <field name="perm_write" eval="1"/>
+        <field name="perm_create" eval="0"/>
+        <field name="perm_unlink" eval="0"/>
+    </record>
+
+    <!-- ==== STOCK / TRANSFER ==== -->
+    <!-- stock.picking: hanya picking yang memuat produk "milik" user -->
+    <record id="rule_picking_customer_only_own_products" model="ir.rule">
+        <field name="name">Stock Picking: only pickings with my products</field>
+        <field name="model_id" ref="stock.model_stock_picking"/>
+        <field name="domain_force">
+            ['|',
+                ('move_ids_without_package.product_id.product_tmpl_id.sales_person_ids','in',[user.id]),
+                ('move_line_ids.product_id.product_tmpl_id.sales_person_ids','in',[user.id])
+            ]
+        </field>
+        <field name="groups" eval="[(4, ref('fjr_custom_stock.group_customer_product_limited'))]"/>
+        <field name="perm_read" eval="1"/>
+        <!-- ubah write/create jika perlu -->
+        <field name="perm_write" eval="0"/>
+        <field name="perm_create" eval="0"/>
+        <field name="perm_unlink" eval="0"/>
+    </record>
+
+    <!-- stock.move: baris perpindahan hanya untuk produk "milik" user -->
+    <record id="rule_move_customer_only_own_products" model="ir.rule">
+        <field name="name">Stock Move: only my products</field>
+        <field name="model_id" ref="stock.model_stock_move"/>
+        <field name="domain_force">[('product_id.product_tmpl_id.sales_person_ids','in',[user.id])]</field>
+        <field name="groups" eval="[(4, ref('fjr_custom_stock.group_customer_product_limited'))]"/>
+        <field name="perm_read" eval="1"/>
+        <field name="perm_write" eval="0"/>
+        <field name="perm_create" eval="0"/>
+        <field name="perm_unlink" eval="0"/>
+    </record>
+
+    <!-- stock.move.line: operation lines hanya untuk produk "milik" user -->
+    <record id="rule_move_line_customer_only_own_products" model="ir.rule">
+        <field name="name">Stock Move Line: only my products</field>
+        <field name="model_id" ref="stock.model_stock_move_line"/>
+        <field name="domain_force">[('product_id.product_tmpl_id.sales_person_ids','in',[user.id])]</field>
+        <field name="groups" eval="[(4, ref('fjr_custom_stock.group_customer_product_limited'))]"/>
+        <field name="perm_read" eval="1"/>
+        <field name="perm_write" eval="0"/>
+        <field name="perm_create" eval="0"/>
+        <field name="perm_unlink" eval="0"/>
+    </record>
+</odoo>

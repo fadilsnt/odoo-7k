@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="purchase_order_form_inherit_hd_inventory_custom" model="ir.ui.view">
+        <field name="name">purchase.order.form.inherit.hd.inventory.custom</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header//button[@name='action_rfq_send']" position="after">
+                <button string="Print BTB" name="action_print_btb" type="object" class="oe_highlight" invisible="not btb_number"/>
+            </xpath>
+
+            <xpath expr="//sheet//group[1]/group[1]" position="inside">
+                <field name="btb_number" readonly="1" invisible="not btb_number"/>
+            </xpath>
+
+            <xpath expr="//label[@for='receipt_reminder_email']" position="before">
+                <field name="vendor_invoice_date"/>
+            </xpath>
+
+        </field>
+    </record>
+</odoo>

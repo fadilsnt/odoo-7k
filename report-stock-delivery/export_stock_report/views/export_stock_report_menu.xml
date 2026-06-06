@@ -1,0 +1,6 @@
+<odoo>
+    <menuitem id="menu_export_stock_report_root"
+              name="Export Stock Report"
+              parent="stock.menu_stock_warehouse_report"
+              action="action_report_export_stock"/>
+</odoo>

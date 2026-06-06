@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_users_view_form_inherit" model="ir.ui.view">
+        <field name="name">res.users.view.form.inherit</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='access_rights']/group" position="after">
+                <group name="group_warehouse" string="Warehouse Settings">
+                    <field name="allowed_warehouse_ids" widget="many2many_tags" options="{'no_create': True}" context="{'display_all_warehouses':True}" />
+                    <field name="customer" />
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

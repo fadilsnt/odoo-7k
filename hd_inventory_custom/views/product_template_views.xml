@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_template_view_form_inherit_hd_inventory_custom" model="ir.ui.view">
+        <field name="name">product.template.view.form.inherit.hd.inventory.custom</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='sales_person_ids']" position="before">
+                <field name="owner_id" string="Sales" options="{'no_create': True}"/>
+                <field name="consume_product_ids" groups="stock.group_stock_manager" widget="many2many_tags"/>
+                <field name="is_cl" invisible="categ_id != 4" groups="stock.group_stock_manager"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="product_template_common_view_form_inherit_extend" model="ir.ui.view">
+        <field name="name">product.template.common.view.form.inherit.extend</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="fjr_custom_stock.product_template_common_view_form_inherit"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='sales_person_ids']" position="attributes">
+                <attribute name="string">Pemilik</attribute>
+                <attribute name="widget">many2many_tags</attribute>
+                <attribute name="options">{'no_create': True}</attribute>
+            </xpath>
+
+        </field>
+    </record>    
+</odoo>

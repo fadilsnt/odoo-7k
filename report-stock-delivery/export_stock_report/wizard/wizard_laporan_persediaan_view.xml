@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="wizard_laporan_persediaan_form_view" model="ir.ui.view">
+        <field name="name">wizard.laporan.persediaan.form.view</field>
+        <field name="model">wizard.laporan.persediaan</field>
+        <field name="arch" type="xml">
+        <form string="Stock Report Wizard">
+            <group>
+                <field name="warehouse_ids" widget="many2many_tags"/>
+                <field name="sales_person_ids" widget="many2many_tags" invisible="kategori_selection == 'fuel'"/>
+                <field name="kategori_selection"/>
+                <field name="end_date"/>
+            </group>
+            <footer>
+                <button name="action_print_report" string="Print Report" type="object" class="btn-primary"/>
+                <button string="Cancel" class="btn-secondary" special="cancel"/>
+            </footer>
+        </form>
+        </field>
+    </record>
+
+    <record id="action_wizard_laporan_stock_persediaan" model="ir.actions.act_window">
+        <field name="name">Laporan Stock Persediaan</field>
+        <field name="res_model">wizard.laporan.persediaan</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>    
+
+    <menuitem id="menu_persedian_report" name="Laporan Stock Persediaan" parent="export_stock_report.menu_print_stock_report" action="action_wizard_laporan_stock_persediaan" sequence="1"/>
+</odoo>

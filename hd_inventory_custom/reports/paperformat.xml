@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_bukti_terima_barang" model="report.paperformat">
+        <field name="name">A5 - Bukti Terima Barang</field>
+        <field name="default" eval="False"/>
+        <field name="format">A5</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">21</field>
+        <field name="margin_bottom">3</field>
+        <field name="margin_left">3</field>
+        <field name="margin_right">3</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">17</field>
+        <field name="dpi">94</field>
+    </record> 
+
+    <record id="paperformat_bukti_terima_barang_inventory" model="report.paperformat">
+        <field name="name">A5 - Bukti Terima Barang Inventory</field>
+        <field name="default" eval="False"/>
+        <field name="format">A5</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">21</field>
+        <field name="margin_bottom">3</field>
+        <field name="margin_left">3</field>
+        <field name="margin_right">3</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">17</field>
+        <field name="dpi">94</field>
+    </record>         
+</odoo>

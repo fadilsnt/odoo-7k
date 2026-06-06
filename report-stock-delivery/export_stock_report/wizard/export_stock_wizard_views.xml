@@ -1,0 +1,33 @@
+<odoo>
+    <record id="view_export_stock_wizard_form" model="ir.ui.view">
+        <field name="name">export.stock.wizard.form</field>
+        <field name="model">export.stock.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Export Stock Report">
+                <group>
+                    <field name="warehouse_ids" widget="many2many_tags"/>
+                    <field name="start_date"/>
+                    <field name="end_date"/>
+                    <field name="sales_person_ids" widget="many2many_tags"/>
+                    <field name="kategori_selection"/>
+                </group>
+                <footer>
+                    <button string="Print"
+                            type="object"
+                            name="action_print_report"
+                            class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_export_stock_wizard" model="ir.actions.act_window">
+        <field name="name">Laporan Pengiriman</field>
+        <field name="res_model">export.stock.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    
+</odoo>

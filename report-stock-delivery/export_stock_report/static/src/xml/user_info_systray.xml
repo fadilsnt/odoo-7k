@@ -1,0 +1,8 @@
+<templates id="template" xml:space="preserve">
+    <t t-name="export_stock_report.UserInfoSystray" owl="1">
+        <div class="o_user_info_systray d-flex align-items-center pe-3">
+            <span t-esc="user.name" class="fw-bold me-1"/>
+            <span t-if="user.email">(<t t-esc="user.email"/>)</span>
+        </div>
+    </t>
+</templates>

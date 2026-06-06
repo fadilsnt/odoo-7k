@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_wizard_inventory_laporan_hari_pengganti_form" model="ir.ui.view">
+        <field name="name">wizard.inventory.laporan.hari.pengganti.form</field>
+        <field name="model">wizard.inventory.laporan.hari.pengganti</field>
+        <field name="arch" type="xml">
+            <form string="Laporan Inventory Hari Pengganti">
+                <div style="white-space: pre-line;">
+                    <div class="alert alert-success" role="alert">
+                        <p>
+                            <h5>Panduan Penggunaan</h5>
+                            Fitur ini digunakan untuk menarik laporan harian produksi dengan informasi inventory lengkap.
+                            <ul>
+                                <li>Menampilkan data produksi harian.</li>
+                                <li>Jika ingin mengambil data dari satu warehouse tertentu, pilih warehouse pada field <b>Warehouse</b>.</li>
+                                <li>Jika ingin mengambil data dari semua warehouse, biarkan field <b>Warehouse</b> kosong.</li>
+                                <li>Laporan akan menampilkan semua transaksi terkait inventory pada tanggal yang dipilih.</li>
+                                <li>
+                                    Pilihan <b>Report Type</b> digunakan untuk menentukan basis perhitungan data:
+                                    <ul>
+                                        <li><b>Quantity</b> : Menampilkan data berdasarkan jumlah unit/barang (qty aktual transaksi).</li>
+                                        <li><b>Tonase</b> : Menampilkan data berdasarkan berat "Tonase Asli".</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </p>
+                    </div>                   
+                </div>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="date"/>
+                        </group>
+                        <group>
+                            <field name="warehouse_id"/>
+                            <field name="report_type" />
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_print_xlsx_report"
+                            string="Print"
+                            type="object"
+                            class="btn-primary"/>
+
+                    <button string="Batal"
+                            special="cancel"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_inventory_laporan_hari_pengganti" model="ir.actions.act_window">
+        <field name="name">Laporan Harian</field>
+        <field name="res_model">wizard.inventory.laporan.hari.pengganti</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_inventory_laporan_hari_pengganti"
+              name="Laporan Harian"
+              parent="export_stock_report.menu_print_stock_report"
+              sequence="10"
+              action="action_inventory_laporan_hari_pengganti"/>
+</odoo>

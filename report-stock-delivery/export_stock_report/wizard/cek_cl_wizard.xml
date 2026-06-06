@@ -1,0 +1,31 @@
+<odoo>
+    <record id="view_cek_cl_wizard_form" model="ir.ui.view">
+        <field name="name">cek.cl.wizard.form</field>
+        <field name="model">report.cek.cl.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cek CL Report">
+                <group>
+                    <field name="kategori_selection"/>
+                    <field name="warehouse_ids" widget="many2many_tags"/>
+                    <field name="end_date"/>
+                </group>
+                <footer>
+                    <button string="Print"
+                            type="object"
+                            name="action_print_report"
+                            class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_cek_cl_wizard" model="ir.actions.act_window">
+        <field name="name">Laporan Cek CL</field>
+        <field name="res_model">report.cek.cl.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    
+</odoo>

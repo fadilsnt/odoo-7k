@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Inherit tree view product.template bawaan modul stock -->
+        <record id="view_stock_product_template_tree_inherit_sortable_qty" model="ir.ui.view">
+            <field name="name">product.template.tree.inherit.sortable.qty</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="stock.view_stock_product_template_tree"/>
+            <field name="arch" type="xml">
+
+                <!-- Sembunyikan field lama qty_available -->
+                <field name="qty_available" position="replace">
+                    <field name="qty_available_stored"
+                           string="Di tangan"
+                           optional="show"/>
+                </field>
+
+                <!-- Sembunyikan field lama virtual_available -->
+                <field name="virtual_available" position="replace">
+                    <field name="virtual_available_stored"
+                           string="Forecasted"
+                           optional="show"/>
+                </field>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

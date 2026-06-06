@@ -1,0 +1,131 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+#   * hd_inventory_custom
+
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo 18.0\n"
+"Language: id\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#. module: hd_inventory_custom
+#: model:ir.ui.menu,name:hd_inventory_custom.menu_sparepart_request
+msgid "Usage Request"
+msgstr "Penggunaan Sparepart"
+
+#. module: hd_inventory_custom
+#: model:ir.actions.act_window,name:hd_inventory_custom.action_stock_picking_sparepart_usage
+msgid "Sparepart Usage"
+msgstr "Penggunaan Sparepart"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Sparepart Details"
+msgstr "Detail Sparepart"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Check Availability"
+msgstr "Cek Ketersediaan"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Validate"
+msgstr "Validasi"
+
+#. module: hd_inventory_custom
+#: model:ir.model.fields,field_description:hd_inventory_custom.field_stock_picking__sparepart_usage_attachment
+msgid "Damage Evidence Attachment"
+msgstr "Lampiran Bukti Kerusakan"
+
+#. module: hd_inventory_custom
+#: model:ir.model.fields,help:hd_inventory_custom.field_stock_picking__sparepart_usage_attachment
+msgid "Lampiran bukti sparepart sebelumnya rusak."
+msgstr "Lampiran bukti sparepart sebelumnya rusak."
+
+#. module: hd_inventory_custom
+#: code:addons/hd_inventory_custom/models/stock_picking.py:0
+#, python-format
+msgid "Damage evidence attachment is required for sparepart usage."
+msgstr "Lampiran bukti kerusakan wajib diisi untuk penggunaan sparepart."
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Note"
+msgstr "Catatan"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Add an internal note that will be printed on the Picking Operations sheet"
+msgstr "Tambahkan catatan internal yang akan dicetak pada dokumen operasi picking"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Done"
+msgstr "Selesai"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Mark as Todo"
+msgstr "Tandai Sebagai To Do"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Check Availability"
+msgstr "Cek Ketersediaan"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Validate"
+msgstr "Validasi"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Cancel"
+msgstr "Batalkan"
+
+#. module: hd_inventory_custom
+#: model_terms:ir.ui.view,arch_db:hd_inventory_custom.view_stock_picking_sparepart_usage_form
+msgid "Are you sure you want to cancel this transfer?"
+msgstr "Apakah Anda yakin ingin membatalkan transfer ini?"
+
+#. module: hd_inventory_custom
+#: model:ir.ui.view,arch_db:hd_inventory_custom.view_wizard_laporan_sparepart_bulanan_form
+msgid "Laporan Sparepart Bulanan"
+msgstr "Laporan Sparepart Bulanan"
+
+#. module: hd_inventory_custom
+#: model:ir.model.fields,field_description:hd_inventory_custom.field_wizard_laporan_sparepart_bulanan__warehouse_id
+msgid "Warehouse"
+msgstr "Gudang"
+
+#. module: hd_inventory_custom
+#: model:ir.ui.view,arch_db:hd_inventory_custom.view_wizard_laporan_sparepart_bulanan_form
+msgid "Date"
+msgstr "Tanggal"
+
+#. module: hd_inventory_custom
+#: model:ir.model.fields,field_description:hd_inventory_custom.field_wizard_laporan_sparepart_bulanan__start_date
+msgid "Start Date"
+msgstr "Tanggal Mulai"
+
+#. module: hd_inventory_custom
+#: model:ir.model.fields,field_description:hd_inventory_custom.field_wizard_laporan_sparepart_bulanan__end_date
+msgid "End Date"
+msgstr "Tanggal Selesai"
+
+#. module: hd_inventory_custom
+#: model:ir.ui.view,arch_db:hd_inventory_custom.view_wizard_laporan_sparepart_bulanan_form
+msgid "Print Report"
+msgstr "Cetak Laporan"
+
+#. module: hd_inventory_custom
+#: model:ir.ui.view,arch_db:hd_inventory_custom.view_wizard_laporan_sparepart_bulanan_form
+msgid "Cancel"
+msgstr "Batal"
+
+#. module: hd_inventory_custom
+#: model:ir.ui.view,arch_db:hd_inventory_custom.view_wizard_laporan_sparepart_bulanan_form
+msgid "All warehouses will be included in the report."
+msgstr "Semua gudang akan dimasukkan ke dalam laporan."

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inventory Adjustments + Update Quantity (via product) view -->
+    <record id="view_stock_quant_tree_inventory_editable_inherit_hd_inventory_custom" model="ir.ui.view">
+        <field name="name">view.stock.quant.tree.inventory.editable.inherit.hd.inventory.custom</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.view_stock_quant_tree_inventory_editable"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list//field[@name='inventory_diff_quantity']" position="after">
+                <field name="available_tonase_asli" string="Available Tonase Asli" optional="hide"/>
+                <field name="tonase_asli" string="Tonase asli" readonly="1" optional="show"/>
+                <field name="inventory_tonase_asli" string="Tonase Terhitung" optional="show"/>
+                <field name="inventory_tonase_asli_diff" string="Selisih Tonase" readonly="1" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_stock_quant_form_editable_inherit_hd_inventory_custom" model="ir.ui.view">
+        <field name="name">view.stock.quant.form.editable.inherit.hd.inventory.custom</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.view_stock_quant_form_editable"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='reserved_quantity']" position="after">
+                <label for="tonase_asli"/>
+                <div class="o_row">
+                    <field name="tonase_asli"/>
+                    <span class="o_form_label">Ton</span>
+                </div>
+
+                <label for="reserved_tonase_asli"/>
+                <div class="o_row">
+                    <field name="reserved_tonase_asli"/>
+                    <span class="o_form_label">Ton</span>
+                </div>
+
+                <label for="available_tonase_asli"/>
+                <div class="o_row">
+                    <field name="available_tonase_asli" readonly="1"/>
+                    <span class="o_form_label">Ton</span>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="stock_quant_name_view_tree_inherit_hd_inventory_custom" model="ir.ui.view">
+        <field name="name">stock.quant.name.view.tree.inherit.hd.inventory.custom</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.view_stock_quant_tree_editable"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list//field[@name='available_quantity']" position="after">
+                <field name="tonase_asli" sum="Total Tonase asli"/>
+                <field name="reserved_tonase_asli" optional="show" sum="Total Reserved Tonase Asli"/>
+                <field name="available_tonase_asli" optional="show" sum="Total Available Tonase Asli"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

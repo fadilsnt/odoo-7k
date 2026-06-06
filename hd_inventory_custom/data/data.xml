@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="seq_sparepart_usage" model="ir.sequence">
+        <field name="name">Sparepart Usage</field>
+        <field name="code">stock.picking.sparepart.usage</field>
+        <field name="prefix">SPU/%(range_year)s/</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+        <field name="implementation">no_gap</field>
+        <field name="use_date_range" eval="True"/>
+    </record>
+
+    <record id="stock_location_sparepart_usage" model="stock.location">
+        <field name="name">Sparepart Usage</field>
+        <field name="location_id" ref="stock.stock_location_locations_virtual"/>
+        <field name="usage">internal</field>
+    </record>
+
+    <record id="picking_type_sparepart_usage" model="stock.picking.type">
+        <field name="name">Sparepart Usage</field>
+        <field name="code">internal</field>
+        <field name="warehouse_id" ref="stock.warehouse0"/>
+        <field name="sequence_id" ref="hd_inventory_custom.seq_sparepart_usage"/>
+        <field name="default_location_src_id" ref="stock.stock_location_stock"/>
+        <field name="default_location_dest_id" ref="hd_inventory_custom.stock_location_sparepart_usage"/>
+        <field name="active">True</field>
+        <field name="create_backorder">ask</field>
+        <field name="sequence_code">SPU</field>
+        <field name="color">4</field>
+    </record>
+
+    <record id="product_category_sparepart" model="product.category">
+        <field name="name">SPAREPARTS</field>
+    </record>    
+</odoo>

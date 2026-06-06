@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- 1) Template mandiri: struktur OWL/DebugMenu-like -->
+    <t t-name="export_stock_report.UserMenuPatch">
+        <Dropdown class="'o_user_menu_patch d-flex align-items-center'"
+            position="'bottom-end'"
+            autoOpen="false"
+        >
+            <!-- toggler slot -->
+            <t t-set-slot="toggler">
+                <span class="o_user_menu_name fw-bold d-flex align-items-center">
+                    <t t-esc="env.services.user.name"/> <span t-if="env.services.user.email"> | <t t-esc="env.services.user.email"/></span>
+                </span>
+            </t>
+
+            <!-- example menu items (sesuaikan) -->
+            <DropdownItem onSelected="() => { }">
+                <t t-esc="'Profile'"/>
+            </DropdownItem>
+            <div role="separator" class="dropdown-divider"/>
+            <DropdownItem>
+                <a href="/web/logout" class="dropdown-item text-danger" t-esc="'Logout'"/>
+            </DropdownItem>
+        </Dropdown>
+    </t>
+
+    <!-- 2) Patch Navbar: sisipkan template mandiri sebelum .o-mail-MessagingMenu-counter -->
+    <t t-extend="web.Navbar">
+        <t t-jquery=".o-mail-MessagingMenu-counter" t-operation="before">
+            <t t-call="export_stock_report.UserMenuPatch"/>
+        </t>
+    </t>
+
+</templates>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="stock_move_line_view_list_inherit" model="ir.ui.view">
+        <field name="name">stock.move.line.view.list.inherit</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.view_move_line_tree"/>
+        <field name="arch" type="xml">
+            <field name="product_uom_id" position="after">
+                <field name="container_quantity" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

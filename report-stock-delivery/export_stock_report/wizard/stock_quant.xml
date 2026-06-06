@@ -1,0 +1,51 @@
+<odoo>
+    <record id="view_dalam_pengirimana_wizard_form" model="ir.ui.view">
+        <field name="name">dalam.pengiriman.wizard.form</field>
+        <field name="model">pengiriman.report.wizard</field>
+        <field name="arch" type="xml">
+        <form string="Stock Report Wizard">
+            <group>
+            <field name="warehouse_ids" widget="many2many_tags"/>
+            <!-- <field name="sales_person_ids" widget="many2many_tags"/> -->
+            <field name="kategori_selection" invisible="1"/>
+            <field name="end_date"/>
+            </group>
+            <footer>
+            <button name="action_print_report" string="Print Report" type="object" class="btn-primary"/>
+            <button string="Cancel" class="btn-secondary" special="cancel"/>
+            </footer>
+        </form>
+        </field>
+    </record>
+
+    <record id="action_report_pengiriman_wizard" model="ir.actions.act_window">
+        <field name="name">Laporan Dalam Perjalanan wizard</field>
+        <field name="res_model">pengiriman.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_print_stock_report"
+          name="Print"
+          parent="stock.menu_warehouse_report"
+          sequence="50"/>
+
+        <menuitem id="menu_dalam_pengiriman_report"
+                name="Laporan Dalam Perjalanan"
+                parent="export_stock_report.menu_print_stock_report"
+                action="action_report_pengiriman_wizard"
+                sequence="2"/>
+
+        <menuitem id="menu_export_stock_report"
+              name="Laporan Pengiriman"
+              parent="export_stock_report.menu_print_stock_report"
+              action="action_export_stock_wizard"
+              sequence="3"/>
+
+        <menuitem id="menu_cek_cl_report"
+              name="Laporan Cek CL"
+              parent="export_stock_report.menu_print_stock_report"
+              action="action_cek_cl_wizard"
+              sequence="4"/>
+
+</odoo>

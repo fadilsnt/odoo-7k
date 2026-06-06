@@ -1,0 +1,322 @@
+<odoo>
+    <template id="report_cek_cl">
+        <t t-call="web.external_layout">
+            <t t-if="kategori == 'LOKAL'">
+                    <t t-call="export_stock_report.report_cek_cl_lokal"/>
+            </t>
+            <t t-elif="kategori == 'EXPORT'">
+                <t t-call="export_stock_report.report_cek_cl_export"/>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_cek_cl_lokal">
+            <main class="page">
+
+                <style>
+                    table.report-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 12px;
+                    }
+                    table.report-table th,
+                    table.report-table td {
+                        border: 1px solid #000;
+                        padding: 4px 6px;
+                    }
+                    table.report-table th {
+                        background-color: #f2f2f2;
+                        text-align: center;
+                        font-weight: bold;
+                    }
+                    h4 {
+                        margin-top: 15px;
+                        margin-bottom: 5px;
+                    }
+                </style>
+
+                <h3 style="text-align:center; margin-bottom:20px;">
+                    TOTAL STOK ARANG LOKAL <br/>
+                    Per tanggal <t t-esc="time.strftime('%d-%m-%Y', time.strptime(str(docs.end_date), '%Y-%m-%d'))"/>
+
+                </h3>
+
+                <t t-foreach="report_data" t-as="line">
+                    <h4><t t-esc="line['product']"/></h4>
+
+                    <table class="report-table">
+                      <thead>
+                          <tr>
+                              <th rowspan="2">Warehouse</th>
+
+                              <t t-foreach="line['uoms']" t-as="u">
+                                  <th colspan="2" style="text-align:center;"><t t-esc="u.name"/></th>
+                              </t>
+
+                              <th rowspan="2">Total</th>
+                          </tr>
+
+                          <tr>
+                              <t t-foreach="line['uoms']" t-as="u">
+                                  <th>BOX</th>
+                                  <th>KG</th>
+                              </t>
+                          </tr>
+                      </thead>
+
+                      <tbody>
+                        <t t-foreach="line['warehouse_lines']" t-as="wh_line">
+                            <tr>
+                                <td><t t-esc="wh_line['warehouse']"/></td>
+
+                                <t t-foreach="line['uoms']" t-as="u">
+                                    <!-- BOX -->
+                                    <td>
+                                        <t t-esc="wh_line['uoms'].get(u, {}).get('box', 0)
+                                                and ('{:,.0f}'.format(
+                                                        wh_line['uoms'].get(u, {}).get('box', 0)
+                                                    ).replace(',', '.')
+                                                ) or '-'"/>
+                                    </td>
+
+                                    <!-- KG -->
+                                    <td>
+                                        <t t-esc="wh_line['uoms'].get(u, {}).get('kg', 0)
+                                                and ('{:,.0f}'.format(
+                                                        wh_line['uoms'].get(u, {}).get('kg', 0)
+                                                    ).replace(',', '.')
+                                                ) or '-'"/>
+                                    </td>
+                                </t>
+
+                                <!-- TOTAL per Warehouse -->
+                                <td>
+                                    <t t-esc="wh_line['total']
+                                            and ('{:,.0f}'.format(
+                                                    wh_line['total']
+                                                ).replace(',', '.')
+                                            ) or '-'"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+
+                    <tfoot>
+                        <tr style="font-weight:bold;">
+                            <td>Total</td>
+
+                            <t t-foreach="line['uoms']" t-as="u">
+                                <!-- Total BOX per UOM -->
+                                <td>
+                                    <t t-esc="line['total_by_uom'][u]['box']
+                                            and ('{:,.0f}'.format(
+                                                    line['total_by_uom'][u]['box']
+                                                ).replace(',', '.')
+                                            ) or '-'"/>
+                                </td>
+
+                                <!-- Total KG per UOM -->
+                                <td>
+                                    <t t-esc="line['total_by_uom'][u]['kg']
+                                            and ('{:,.0f}'.format(
+                                                    line['total_by_uom'][u]['kg']
+                                                ).replace(',', '.')
+                                            ) or '-'"/>
+                                </td>
+                            </t>
+
+                            <!-- Total KG keseluruhan -->
+                            <td>
+                                <t t-esc="line['total_kg']
+                                        and ('{:,.0f}'.format(
+                                                line['total_kg']
+                                            ).replace(',', '.')
+                                        ) or '-'"/>
+                            </td>
+                        </tr>
+                    </tfoot>
+                  </table>
+
+                    <br/>
+                </t>
+
+            </main>
+    </template>
+
+    <template id="report_cek_cl_export">
+        <main class="page" style="font-size:12px;">
+            <h3 style="text-align:center; margin-bottom:20px;">
+                    Report Total Box Export <br/>
+                    Dalam satuan CONTAINER <br/>
+                    Per tanggal <t t-esc="time.strftime('%d-%m-%Y', time.strptime(str(docs.end_date), '%Y-%m-%d'))"/>
+
+            </h3>
+
+            <t t-if="report_data">
+                <t t-set="data" t-value="report_data[0]"/>
+
+                <t t-set="boxes" t-value="data['boxes']"/>
+                <t t-set="grades" t-value="data['grades']"/>
+                <t t-set="wh_lines" t-value="data['warehouse_lines']"/>
+
+                <table style="width:100%; border-collapse: collapse;">
+
+                    <!-- ======================== -->
+                    <!-- HEADER BARU (DIPUTAR) -->
+                    <!-- ======================== -->
+                    <tr style="background:#ddd; font-weight:bold;">
+                        <th rowspan="2" style="text-align:center; padding:6px; border:1px solid #000;">
+                            BOX
+                        </th>
+                        <th rowspan="2" style="text-align:center; padding:6px; border:1px solid #000;">
+                            GRADE
+                        </th>
+
+                        <!-- warehouse sekarang menjadi kolom -->
+                        <th t-att-colspan="len(wh_lines)"
+                            style="text-align:center; padding:6px; border:1px solid #000;">
+                            PABRIK
+                        </th>
+
+                        <th rowspan="2"
+                            style="text-align:center; padding:6px; border:1px solid #000;">
+                            TOTAL
+                        </th>
+                    </tr>
+
+                    <tr style="background:#eee; font-weight:bold;">
+                        <t t-foreach="wh_lines" t-as="wh">
+                            <th style="text-align:center; padding:6px; border:1px solid #000;">
+                                <t t-esc="wh['warehouse']"/>
+                            </th>
+                        </t>
+                    </tr>
+
+                   
+                    <!-- ======================== -->
+                    <!-- BODY TANPA ROWSPAN -->
+                    <!-- ======================== -->
+
+                    <t t-set="last_box" t-value="''"/>
+
+                    <t t-foreach="boxes" t-as="box">
+
+                    <!-- ================= -->
+                    <!-- DETAIL PER GRADE -->
+                    <!-- ================= -->
+                    <t t-foreach="grades" t-as="grade">
+
+                        <t t-set="row_total"
+                            t-value="sum([wh['boxes'].get(box, {}).get(grade, 0) for wh in wh_lines])"/>
+
+                        <tr t-if="row_total > 0">
+
+                            <td style="text-align:center; padding:6px; border:1px solid #000;">
+                                <t t-esc="box"/>
+                            </td>
+
+                            <td style="text-align:center; padding:6px; border:1px solid #000;">
+                                <t t-esc="grade"/>
+                            </td>
+
+                            <t t-foreach="wh_lines" t-as="wh">
+                                <td style="text-align:center; padding:6px; border:1px solid #000;">
+                                    <t t-esc="wh['boxes'].get(box, {}).get(grade, 0)
+                                            and ('{:,.2f}'.format(
+                                                    wh['boxes'].get(box, {}).get(grade, 0)
+                                                )
+                                                .replace(',', 'X')
+                                                .replace('.', ',')
+                                                .replace('X', '.')
+                                            ) or '-'"/>
+                                </td>
+                            </t>
+
+                            <td style="text-align:center; padding:6px; border:1px solid #000;">
+                                <t t-esc="row_total
+                                        and ('{:,.2f}'.format(row_total)
+                                            .replace(',', 'X')
+                                            .replace('.', ',')
+                                            .replace('X', '.')
+                                        ) or '-'"/>
+                            </td>
+
+                        </tr>
+
+                    </t>
+
+                    <!-- ================= -->
+                    <!-- TOTAL PER BOX -->
+                    <!-- ================= -->
+                    <t t-set="box_total"
+                        t-value="sum([
+                            wh['boxes'].get(box, {}).get(g, 0)
+                            for wh in wh_lines
+                            for g in grades
+                        ])"/>
+
+                    <tr t-if="box_total > 0" style="background:#f0f0f0; font-weight:bold;">
+                        <td colspan="2" style="padding:6px; border:1px solid #000;">
+                            TOTAL BOX <t t-esc="box"/>
+                        </td>
+
+                        <t t-foreach="wh_lines" t-as="wh">
+                            <td style="text-align:center; padding:6px; border:1px solid #000;">
+                                <t t-esc="sum([wh['boxes'].get(box, {}).get(g, 0) for g in grades])
+                                        and ('{:,.2f}'.format(
+                                                sum([wh['boxes'].get(box, {}).get(g, 0) for g in grades])
+                                            )
+                                            .replace(',', 'X')
+                                            .replace('.', ',')
+                                            .replace('X', '.')
+                                        ) or '-'"/>
+                            </td>
+                        </t>
+
+                        <td style="text-align:center; padding:6px; border:1px solid #000;">
+                            <t t-esc="box_total
+                                    and ('{:,.2f}'.format(box_total)
+                                        .replace(',', 'X')
+                                        .replace('.', ',')
+                                        .replace('X', '.')
+                                    ) or '-'"/>
+                        </td>
+                    </tr>
+
+                </t>
+
+                <!-- ======================== -->
+                <!-- FOOTER BARU (TOTAL PER WAREHOUSE) -->
+                <!-- ======================== -->
+                <tr style="background:#ddd; font-weight:bold;">
+                    <td colspan="2" style="padding:6px; border:1px solid #000;">
+                        TOTAL PER PABRIK
+                    </td>
+
+                    <t t-foreach="wh_lines" t-as="wh">
+                        <td style="text-align:center; padding:6px; border:1px solid #000;">
+                            <t t-esc="wh['total']
+                                    and ('{:,.2f}'.format(wh['total'])
+                                        .replace(',', 'X')
+                                        .replace('.', ',')
+                                        .replace('X', '.')
+                                    ) or '-'"/>
+                        </td>
+                    </t>
+
+                    <td style="text-align:center; padding:6px; border:1px solid #000;">
+                        <t t-esc="data['grand_total']
+                                and ('{:,.2f}'.format(data['grand_total'])
+                                    .replace(',', 'X')
+                                    .replace('.', ',')
+                                    .replace('X', '.')
+                                ) or '-'"/>
+                    </td>
+                </tr>
+
+                </table>
+            </t>
+
+        </main>
+    </template>
+</odoo>

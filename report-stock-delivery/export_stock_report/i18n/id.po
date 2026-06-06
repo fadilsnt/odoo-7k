@@ -1,0 +1,4 @@
+#. module: export_stock_report
+#: model_terms:ir.ui.view,arch_db:export_stock_report.inherit_product_template_kanban_stock_view
+msgid "Forecasted:"
+msgstr "Perkiraan:"

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_move_view_tree_inherit_hd_inventory_custom" model="ir.ui.view">
+        <field name="name">stock.move.view.tree.inherit.hd.inventory.custom</field>
+        <field name="model">stock.move</field>
+        <field name="inherit_id" ref="stock.view_move_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_uom']" position="after">
+                <!-- <field name="tonase_asli_demand" /> -->
+                <field name="tonase_asli" />
+            </xpath>
+        </field>
+    </record>
+</odoo>

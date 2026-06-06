@@ -1,0 +1,71 @@
+<odoo>
+
+    <record id="view_picking_form_repack_tree" model="ir.ui.view">
+        <field name="name">stock.picking.form.repack.tree</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Tambah Page Repack -->
+            <xpath expr="//sheet/notebook" position="inside">
+
+                <page string="Repack">
+
+                    <!-- Button -->
+
+                    <field name="is_repack_done" invisible="1"/>
+
+                    <!-- ===================== -->
+                    <!-- REPACK LINE (PRODUCT A) -->
+                    <!-- ===================== -->
+
+                    <field name="repack_line_ids">
+                        <list>
+                            <field name="product_a_id"/>
+                            <field name="qty_a"/>
+                        </list>
+
+                        <!-- FORM ketika klik baris -->
+                        <form string="Repack Line">
+
+                            <group>
+                                <field name="product_a_id"/>
+                                <field name="qty_a"/>
+                            </group>
+
+                            <separator string="Hasil Repack"/>
+
+                            <!-- ===================== -->
+                            <!-- OUTPUT (PRODUCT B BANYAK) -->
+                            <!-- ===================== -->
+
+                            <field name="repack_output_ids">
+                                <list editable="bottom">
+
+                                    <field name="product_b_id"/>
+                                    <field name="qty_b"/>
+
+                                </list>
+
+                                <form string="Repack Output">
+                                    <group>
+                                        <field name="product_b_id"/>
+                                        <field name="qty_b"/>
+                                    </group>
+                                </form>
+
+                            </field>
+
+                        </form>
+
+                    </field>
+
+                </page>
+
+            </xpath>
+
+        </field>
+    </record>
+
+
+</odoo>

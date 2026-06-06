@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="hd_inventory_custom.DateSearch">
+        <div class="row mt-2">
+            <div class="col-7"></div>
+            <div class="col-5">
+                <div class="p-1">
+                    <div class="d-flex align-items-center justify-content-end gap-2">
+                        <label class="form-label mb-0">Filter</label>
+
+                        <!-- 🔑 TANPA arrow function -->
+                        <DateTimeInput type="'date'" onChange="onStartDateChanged"/>
+                        <span class="mx-1 text-muted">⇄</span>
+                        <DateTimeInput type="'date'" onChange="onEndDateChanged"/>
+
+                        <!-- 🔽 Warehouse Dropdown -->
+                        <select class="form-select form-select-sm"
+                                t-on-change="onWarehouseChanged"
+                                style="width: 400px; 
+                                    border-radius: 8px; 
+                                    border: 1px solid #ced4da; 
+                                    padding: 4px 32px 4px 8px; 
+                                    font-size: 12px; 
+                                    white-space: nowrap; 
+                                    overflow: hidden; 
+                                    text-overflow: ellipsis;">
+                            <option value="">All Warehouse</option>
+                            <t t-foreach="state.warehouses" t-as="wh" t-key="wh.id">
+                                <option t-att-value="wh.id">
+                                    <t t-esc="wh.name"/>
+                                </option>
+                            </t>
+                        </select>
+
+                        <button type="button" class="btn btn-outline-success btn-sm" style="width: 300px; font-size: 12px;" t-on-click="onClickPrintExcel"> Xlsx Report</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-inherit="purchase.PurchaseDashboard" t-inherit-mode="extension">
+        <xpath expr="//div[contains(@class,'row') and contains(@class,'justify-content-between')]" position="after">
+            <DateSearch t-props="props"/>
+        </xpath>
+    </t>
+
+</templates>
