@@ -2,8 +2,8 @@ from odoo import models, fields
 from datetime import datetime
 
 SELECTION_REPORT_TYPE = [
-    ('quantity_base', 'Quantity'),
-    ('tonase_base', 'Tonase')
+    ('quantity_base', 'Laporan Export'),
+    ('tonase_base', 'Tonasi Asli')
 ]
 
 class WizardInventoryLaporanHariPengganti(models.TransientModel):
@@ -12,11 +12,7 @@ class WizardInventoryLaporanHariPengganti(models.TransientModel):
 
     date = fields.Date(string="Date", required=True, default=fields.Date.context_today)
     warehouse_id = fields.Many2one(comodel_name='stock.warehouse', string="Warehouse", required=False)
-    report_type = fields.Selection(
-        selection=SELECTION_REPORT_TYPE,
-        string="Report Type",
-        default='quantity_base'
-    )
+    report_type = fields.Selection(selection=SELECTION_REPORT_TYPE, string="Report Type", default='quantity_base')
 
     def action_print_xlsx_report(self):
         self.ensure_one()
@@ -25,10 +21,10 @@ class WizardInventoryLaporanHariPengganti(models.TransientModel):
         warehouse_name = self.warehouse_id.name if self.warehouse_id else 'Semua Gudang'
         filename = f"Laporan Harian {warehouse_name} - {report_date}"
         
+        report_obj = self.env.ref('hd_inventory_custom.inventory_laporan_hari_pengganti_tonase_base_xlsx')
+        
         if self.report_type == 'quantity_base':
             report_obj = self.env.ref('hd_inventory_custom.inventory_laporan_hari_pengganti_xlsx')
-        else:
-            report_obj = self.env.ref('hd_inventory_custom.inventory_laporan_hari_pengganti_tonase_base_xlsx')
 
         report_obj.name = filename
 

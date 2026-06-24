@@ -12,10 +12,6 @@ _logger = logging.getLogger(__name__)
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
-    _sql_constraints = [
-        ('btb_number_unique', 'unique(btb_number)', 'BTB number must be unique!')
-    ]
-
     pemilik_ids = fields.Many2many('res.partner', 'stock_picking_owner_rel', 'picking_id', 'owner_id', string="Owners", help="Owner yang terlibat pada stock move.")
     btb_number = fields.Char(string="No. BTB", readonly=True, copy=False)
     partner_ref = fields.Char('Vendor Reference', copy=False, help="Reference of the sales order or bid sent by the vendor.")
@@ -151,12 +147,14 @@ class StockPicking(models.Model):
 
             start_month = date_ref.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             end_month = (start_month + relativedelta(months=1)) - timedelta(microseconds=1)
+            warehouse_id = picking.picking_type_id.warehouse_id.id
 
             domain = [
                 ('picking_type_code', '=', 'incoming'),
                 ('btb_number', '!=', False),
                 ('scheduled_date', '>=', start_month),
                 ('scheduled_date', '<=', end_month),
+                ('picking_type_id.warehouse_id', '=', warehouse_id),
             ]
 
             last = self.env['stock.picking'].sudo().search(domain, order='id desc', limit=1)

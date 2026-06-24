@@ -58,6 +58,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
     _name = 'report.hd_inventory_custom.inventory_laporan_hari_pengganti_ton'
     _inherit = 'report.report_xlsx.abstract'
 
+
     def _get_data_xlsx_report(self, report_date, warehouse_id=None):
         warehouse_filter = ""
         params = {'report_date': report_date}
@@ -182,6 +183,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     asumsi_berat_ikat,
                     classification,
                     product_category,
+                    uom_category,
 
                     json_agg(
                         json_build_object(
@@ -208,7 +210,8 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     bongkaran,
                     asumsi_berat_ikat,
                     classification,
-                    product_category
+                    product_category,
+                    uom_category
             ),
 
             total_per_grade_cte AS (
@@ -238,6 +241,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             'asumsi_berat_ikat', og.asumsi_berat_ikat,
                             'classification', og.classification,
                             'product_category', og.product_category,
+                            'uom_category', og.uom_category,
                             'products', og.products,
                             'total_per_oven', og.total_per_oven
                         )
@@ -402,8 +406,6 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
         data_report = self._get_data_xlsx_report(report_date, warehouse.id if warehouse else None)
         repack_data = self._get_repack_data(report_date, warehouse.id if warehouse else None)
 
-        _logger.info("Repack Data %s", repack_data)
-
         # =========================================================
         # RENDER SHEET
         # =========================================================
@@ -472,6 +474,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             aggregated_special[product_name] = {"tonase": tonase, "uom": uom, "category": category}
                 else:
                     other_ovens.append(o)  # keep other products for normal mapping
+                _logger.info("Logger aggregated_special: %s", aggregated_special)
 
             # ================= MAP OTHER OVENS =================
             for o in other_ovens:
@@ -598,7 +601,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
             # ================= WRITE LOKAL/FUEL PER OVEN (TANPA HEADER) =================
             if aggregated_special:
-                # produk -> oven -> list[{qty, uom}]
+                _logger.info("aggregated_special 1: %s", aggregated_special)
                 product_per_oven = {}
 
                 for o in ovens:
@@ -607,13 +610,13 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                         for p in o.get("products", []):
                             product_name = p.get("product")
-                            tonase = p.get("tonase", 0)
+                            qty = p.get("tonase", 0)
                             uom = o.get("uom_category")
 
                             product_per_oven.setdefault(product_name, {})
                             product_per_oven[product_name].setdefault(oven_key, [])
                             product_per_oven[product_name][oven_key].append({
-                                "tonase": tonase,
+                                "qty": qty,
                                 "uom": uom,
                             })
 
@@ -630,12 +633,12 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                         for item in items:
                             grouped.setdefault(item["uom"], [])
-                            grouped[item["uom"]].append(item["tonase"])
+                            grouped[item["uom"]].append(item["qty"])
 
                         grouped_list = [
                             {
                                 "uom": uom,
-                                "tonase_str": " | ".join(str(fmt_qty(q)) for q in qtys)
+                                "qty_str": " | ".join(str(fmt_qty(q)) for q in qtys)
                             }
                             for uom, qtys in grouped.items()
                         ]
@@ -675,7 +678,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                             if line_index < len(grouped_list):
                                 data = grouped_list[line_index]
-                                tonase_str = data["tonase_str"]
+                                qty_str = data["qty_str"]
                                 uom_str = data["uom"]
 
                                 sheet.write(row + line_index, col, qty_str, fmt_number)
@@ -687,7 +690,6 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             col += 2
 
                     row += max_lines
-
             # ================= TOTAL ROW =================
             sheet.write(row, 0, "TOTAL QTY (KG)", fmt_header)
             col = 1
@@ -699,6 +701,8 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     oven_key = _get_oven_key(o.get("oven"), o.get("production_date")) or "NONE"
                     if oven_key == oven:
                         total += o.get("total_per_oven", 0)
+
+                _logger.info("Total per oven: %s, oven: %s", total, oven)
 
                 sheet.merge_range(row, col, row, col + 1, total if total else "-", fmt_total)
                 col += 2
@@ -754,6 +758,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     
             # ================= LOOP PRODUK LOKAL / FUEL =================
             if aggregated_special:
+                _logger.info("aggregated_special: %s", aggregated_special)
                 for p_name, p_data in sorted(aggregated_special.items()):
                     category = p_data.get("category", "-")
 

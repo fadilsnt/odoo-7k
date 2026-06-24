@@ -7,7 +7,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='product_uom']" position="after">
                 <!-- <field name="tonase_asli_demand" /> -->
-                <field name="tonase_asli" />
+                <field name="tonase_asli"/>
             </xpath>
         </field>
     </record>

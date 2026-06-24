@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+import logging
 from odoo import models, fields, api, _
+
+_logger = logging.getLogger(__name__)
 
 class StockMove(models.Model):
     _inherit = 'stock.move'
@@ -10,6 +13,18 @@ class StockMove(models.Model):
     sparepart_category_id = fields.Many2one('product.category', string="Sparepart Category", default=lambda self: self.env.ref('hd_inventory_custom.product_category_sparepart', raise_if_not_found=False))
     tonase_asli = fields.Float(string="Tonase Asli")
     tonase_asli_demand = fields.Float(string="Tonase Asli Demand")
+    is_tonase_move_line = fields.Boolean(string="is Tonase Move Line?", compute="_compute_is_tonase_move_line", default=False)
+
+    @api.depends('move_line_ids')
+    def _compute_is_tonase_move_line(self):
+        for rec in self:
+            _logger.info(
+                "PICKING: %s, MOVE %s -> move_line_ids=%s",
+                rec.picking_id,
+                rec.id,
+                rec.move_line_ids.ids
+            )
+            rec.is_tonase_move_line = bool(rec.move_line_ids)
 
     def _prepare_move_line_vals(self, quantity=None, reserved_quant=None):
         vals = super()._prepare_move_line_vals(quantity=quantity, reserved_quant=reserved_quant)
