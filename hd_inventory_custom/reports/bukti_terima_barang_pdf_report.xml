@@ -29,7 +29,7 @@
 
     <!-- ================= BODY ================= -->
     <template id="bukti_terima_barang_body">
-        <div class="page">
+        <div class="page" style="font-size: 13px;">
             <table class="detail-document w-100 table-borderless border p-1">
                 <tr>
                     <td style="width:18%; padding-left: 50px;">No. BTB</td>
@@ -68,35 +68,38 @@
             </table>
 
             <table class="detail-product-line w-100">
-                <tr>
-                    <th class="p-1" style="font-weight: bold; width: 4%;">No</th>
-                    <th class="p-1" style="font-weight: bold; width: 30%;">Nama Barang</th>
-                    <th class="p-1" style="font-weight: bold; width: 30%;">Keterangan</th>
-                    <th class="p-1" style="font-weight: bold; width: 18%;">Qty</th>
-                    <th class="p-1" style="font-weight: bold; width: 18%;">Satuan</th>
-                </tr>
+                <thead>
+                    <tr>
+                        <th class="p-1" style="font-weight: bold; width: 4%;">No</th>
+                        <th class="p-1" style="font-weight: bold; width: 36%;">Nama Barang</th>
+                        <th class="p-1" style="font-weight: bold; width: 31%;">Keterangan</th>
+                        <th class="p-1" style="font-weight: bold; width: 11%;">Qty</th>
+                        <th class="p-1" style="font-weight: bold; width: 18%;">Satuan</th>
+                    </tr>
+                </thead>
 
                 <t t-set="max_line" t-value="9"/>
                 <t t-set="lines" t-value="o.order_line"/>
-
-                <t t-foreach="range(max_line)" t-as="i">
-                    <tr>
-                        <t t-if="i &lt; len(lines)">
-                            <td class="p-1 text-center"><t t-esc="i+1"/></td>
-                            <td class="p-1 text-left"><t t-esc="lines[i].name"/></td>
-                            <td class="p-1 text-left"><t t-esc="lines[i].name"/></td>
-                            <td class="p-1 text-center"><t t-esc="'{:,.0f}'.format(lines[i].qty_received or 0).replace(',', '.')"/></td>
-                            <td class="p-1 text-center"><t t-esc="lines[i].product_uom.name"/></td>
-                        </t>
-                        <t t-else="">
-                            <td class="p-1"><br /></td>
-                            <td class="p-1"></td>
-                            <td class="p-1"></td>
-                            <td class="p-1"></td>
-                            <td class="p-1"></td>
-                        </t>
-                    </tr>
-                </t>
+                <tbody>
+                    <t t-foreach="range(max_line)" t-as="i">
+                        <tr>
+                            <t t-if="i &lt; len(lines)">
+                                <td class="p-1 text-center"><t t-esc="i+1"/></td>
+                                <td class="p-1 text-left"><t t-esc="lines[i].name"/></td>
+                                <td class="p-1 text-left"><t t-esc="lines[i].description_picking"/></td>
+                                <td class="p-1 text-center"><t t-esc="'{:,.0f}'.format(lines[i].qty_received or 0).replace(',', '.')"/></td>
+                                <td class="p-1 text-center"><t t-esc="lines[i].product_uom.name"/></td>
+                            </t>
+                            <t t-else="">
+                                <td class="p-1"><br /></td>
+                                <td class="p-1"></td>
+                                <td class="p-1"></td>
+                                <td class="p-1"></td>
+                                <td class="p-1"></td>
+                            </t>
+                        </tr>
+                    </t>
+                </tbody>
             </table>
 
             <table class="table-signature w-100 table-borderless border">
@@ -107,10 +110,10 @@
                     <th class="w-25" style="padding: 20px 0px">Bag. Penerimaan,</th>
                 </tr>
                 <tr>
-                    <td style="height: 68px;"></td>
-                    <td style="height: 68px;"></td>
-                    <td style="height: 68px;"></td>
-                    <td style="height: 68px;"></td>
+                    <td style="height: 64px;"></td>
+                    <td style="height: 64px;"></td>
+                    <td style="height: 64px;"></td>
+                    <td style="height: 64px;"></td>
                 </tr>
                 <tr>
                     <td style="padding: 0px 0px 20px 0px" class="text-center">(.......................................................)</td>

@@ -11,7 +11,7 @@
         <field name="margin_right">3</field>
         <field name="header_line" eval="False"/>
         <field name="header_spacing">17</field>
-        <field name="dpi">94</field>
+        <field name="dpi">95</field>
     </record> 
 
     <record id="paperformat_bukti_terima_barang_inventory" model="report.paperformat">
@@ -25,6 +25,6 @@
         <field name="margin_right">3</field>
         <field name="header_line" eval="False"/>
         <field name="header_spacing">17</field>
-        <field name="dpi">94</field>
+        <field name="dpi">95</field>
     </record>         
 </odoo>
