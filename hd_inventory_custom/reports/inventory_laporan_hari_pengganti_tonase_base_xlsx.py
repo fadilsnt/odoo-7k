@@ -209,7 +209,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                         ) ORDER BY product
                     ) AS products,
 
-                    SUM(qty * COALESCE(tonase, 0)) AS total_per_oven
+                    SUM(qty * COALESCE(tonase, 1)) AS total_per_oven
 
                 FROM base_data
                 GROUP BY
@@ -528,9 +528,9 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     data_map[grade][oven_key]["products"][product]["qty"] += qty
                     data_map[grade][oven_key]["products"][product]["tonase"] = p.get("tonase", 0)
 
-                    tonase = p.get("tonase", 0)
+                    tonase = p.get("tonase") or 1
                     if o.get("product_category") == "EXPORT":
-                        total_per_oven[oven_key] += qty * tonase
+                        total_per_oven[oven_key] += qty * tonase 
                     else:
                         total_per_oven[oven_key] += qty
 
@@ -753,7 +753,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                                 product = p.get("product")
                                 qty = p.get("qty", 0)
                                 uom = o.get("uom_category")
-                                tonase = p.get("tonase", 0)
+                                tonase = p.get("tonase") or 1
                                 is_cl = p.get("is_cl", False)
 
                                 # ================= QTY ASLI =================
@@ -836,7 +836,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                 for p in o.get("products", []):
                     qty = p.get("qty", 0)
-                    tonase = p.get("tonase", 1)
+                    tonase = p.get("tonase") or 1
                     is_cl = p.get("is_cl", False)
 
                     total_all_grades += (qty * tonase)
