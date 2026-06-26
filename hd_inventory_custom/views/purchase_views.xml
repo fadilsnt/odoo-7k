@@ -17,6 +17,14 @@
                 <field name="vendor_invoice_date"/>
             </xpath>
 
+            <xpath expr="//field[@name='order_line']/list/field[@name='name']" position="attributes">
+                <attribute name="widget"/>
+                <attribute name="column_invisible">True</attribute>
+            </xpath>      
+
+            <xpath expr="//field[@name='order_line']/list/field[@name='name']" position="after">
+                <field name="product_description" optional="show"/>
+            </xpath>     
         </field>
     </record>
 </odoo>

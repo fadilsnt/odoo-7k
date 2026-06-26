@@ -85,8 +85,8 @@
                         <tr>
                             <t t-if="i &lt; len(lines)">
                                 <td class="p-1 text-center"><t t-esc="i+1"/></td>
-                                <td class="p-1 text-left"><t t-esc="lines[i].name"/></td>
-                                <td class="p-1 text-left"><t t-esc="lines[i].description_picking"/></td>
+                                <td class="p-1 text-left"><t t-esc="lines[i].product_id.name"/></td>
+                                <td class="p-1 text-left"><span t-field="lines[i].product_description"/></td>
                                 <td class="p-1 text-center"><t t-esc="'{:,.0f}'.format(lines[i].qty_received or 0).replace(',', '.')"/></td>
                                 <td class="p-1 text-center"><t t-esc="lines[i].product_uom.name"/></td>
                             </t>
