@@ -11,4 +11,3 @@ from . import purchase
 from . import ir_ui_menu
 from . import stock_picking_type
 from . import stock_quant
-from . import purchase_order_line
