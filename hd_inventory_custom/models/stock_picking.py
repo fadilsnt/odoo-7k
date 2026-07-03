@@ -18,7 +18,7 @@ class StockPicking(models.Model):
     consume_move_ids = fields.One2many('stock.move', 'picking_id', string='Consume Moves', domain=[('is_consume', '=', True)])    
     move_ids_without_package = fields.One2many('stock.move', 'picking_id', string="Stock move", domain=['|', ('package_level_id', '=', False), ('picking_type_entire_packs', '=', False), ('is_consume', '=', False)])    
     sparepart_usage_attachment = fields.Many2many('ir.attachment', 'stock_picking_sparepart_attachment_rel', 'picking_id', 'attachment_id', string="Damage Evidence Attachment", help="Lampiran bukti sparepart sebelumnya rusak.")
-    is_sparepart_usage = fields.Boolean(string="Is Sparepart Usage", compute="_compute_is_sparepart_usage", store=True)
+    is_sparepart_usage = fields.Boolean(string="Is Sparepart Usage")
     requestor_id = fields.Many2one('res.users', string='Requestor', tracking=True, states={'draft': [('readonly', False)]},)
     return_picking_ids = fields.One2many('stock.picking', 'origin_picking_id', string="Return Pickings")    
     return_count = fields.Integer(string="Return Count", compute="_compute_return_count")
@@ -27,6 +27,30 @@ class StockPicking(models.Model):
     def _compute_return_count(self):
         for rec in self:
             rec.return_count = self.env['stock.picking'].search_count([('origin_picking_id', '=', rec.id)])    
+
+    allowed_warehouse_ids = fields.Many2many("stock.warehouse", readonly=True)
+
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+
+        if self.env.context.get("clear_sparepart_defaults"):
+            res.update({
+                "picking_type_id": False,
+                "location_id": False,
+                "location_dest_id": False,
+                "is_sparepart_usage": True
+            })        
+
+        if "allowed_warehouse_ids" in fields_list:
+            if self.env.user.allowed_warehouse_ids:
+                warehouses = self.env.user.allowed_warehouse_ids
+            else:
+                warehouses = self.env["stock.warehouse"].search([])
+
+            res["allowed_warehouse_ids"] = [(6, 0, warehouses.ids)]
+
+        return res
 
     def action_view_return_pickings(self):
         return {
@@ -54,16 +78,6 @@ class StockPicking(models.Model):
                 'default_is_return_sparepart': True
             }
         }    
-
-    @api.depends('picking_type_id')
-    def _compute_is_sparepart_usage(self):
-        picking_type = self.env.ref('hd_inventory_custom.picking_type_sparepart_usage', raise_if_not_found=False)
-
-        for rec in self:
-            rec.is_sparepart_usage = bool(
-                picking_type
-                and rec.picking_type_id.id == picking_type.id
-            )
 
     def _validate_consume_products(self, picking):
         errors = []
@@ -211,8 +225,14 @@ class StockPicking(models.Model):
                         ))
 
         self._compute_btb_number()
-
-        res = super().button_validate()
+        for ml in picking.move_line_ids:
+            _logger.info(
+                "qty=%.17f rounding=%.17f",
+                ml.quantity,
+                ml.product_uom_id.rounding,
+            )      
+     
+        res = super().button_validate()            
 
         for picking in self:
             if self.env['stock.move'].search([
@@ -243,7 +263,7 @@ class StockPicking(models.Model):
                     else:
                         for ml in move.move_line_ids:
                             ml.quantity = move.product_uom_qty
-
+            
                 moves._action_done()
 
         return res
