@@ -647,32 +647,69 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 products = sorted(product_per_oven.keys())
 
                 for product_name in products:
-                    sheet.write(row, 0, product_name, fmt_grade)
+                    max_lines = 1
 
-                    col = 1
+                    oven_grouped_data = {}
 
                     for oven in oven_list:
                         items = product_per_oven[product_name].get(oven, [])
+                        grouped = {}
 
-                        if items:
-                            qty_str = " | ".join(
-                                str(fmt_qty(item["qty"]))
-                                for item in items
-                            )
-                            uom_str = " | ".join(
-                                item["uom"]
-                                for item in items
-                            )
+                        for item in items:
+                            grouped.setdefault(item["uom"], [])
+                            grouped[item["uom"]].append(item["qty"])
 
-                            sheet.write(row, col, qty_str, fmt_number)
-                            sheet.write(row, col + 1, uom_str, fmt_text_center)
-                        else:
-                            sheet.write(row, col, "-", fmt_number)
-                            sheet.write(row, col + 1, "-", fmt_text_center)
+                        grouped_list = [
+                            {
+                                "uom": uom,
+                                "qty_str": " | ".join(str(fmt_qty(q)) for q in qtys)
+                            }
+                            for uom, qtys in grouped.items()
+                        ]
 
-                        col += 2
+                        oven_grouped_data[oven] = grouped_list
 
-                    row += 1
+                        if len(grouped_list) > max_lines:
+                            max_lines = len(grouped_list)
+
+                    for line_index in range(max_lines):
+                        uom_str = next(
+                            (
+                                grouped_list[line_index]["uom"]
+                                for oven in oven_list
+                                for grouped_list in [oven_grouped_data.get(oven, [])]
+                                if line_index < len(grouped_list)
+                            ),
+                            ""
+                        )
+
+                        display_name = (
+                            f"{product_name} ({uom_str})"
+                            if uom_str else product_name
+                        )
+
+                        sheet.write(row + line_index, 0, display_name, fmt_grade)
+
+                        col = 1
+
+                        for oven in oven_list:
+                            grouped_list = oven_grouped_data.get(oven, [])
+
+                            if line_index < len(grouped_list):
+                                data = grouped_list[line_index]
+                                qty_str = data["qty_str"]
+                                uom_str = data["uom"]
+
+                                sheet.write(row + line_index, col, qty_str, fmt_number)
+                                sheet.write(row + line_index, col + 1, uom_str, fmt_text_center)
+                            else:
+                                sheet.write(row + line_index, col, "-", fmt_number)
+                                sheet.write(row + line_index, col + 1, "-", fmt_text_center)
+
+                            col += 2
+
+                    row += max_lines
+
 
             # ================= TOTAL ROW =================
             sheet.write(row, 0, "TOTAL QTY (KG)", fmt_header)
@@ -760,7 +797,6 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             uom = o.get("uom_category")
                             is_cl = p.get("is_cl", False)
                             tonase = o.get("tonase", 1)
-
                             value = qty if is_cl else qty * tonase
 
                             if uom not in uom_data:
@@ -772,22 +808,19 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             uom_data[uom]["qty"] += qty
                             uom_data[uom]["total"] += value
 
-                    qty_str = " | ".join(
-                        str(fmt_qty(v["qty"])) for v in uom_data.values()
-                    )
+                    # ============================================
+                    # WRITE ROW PER UOM
+                    # ============================================
+                    for uom, vals in sorted(uom_data.items()):
+                        qty = vals["qty"]
+                        total = vals["total"]
 
-                    total_str = " | ".join(
-                        str(fmt_qty(v["total"])) for v in uom_data.values()
-                    )
+                        sheet.write(grade_row, grade_col_start, p_name, fmt_text_center)
+                        sheet.write(grade_row, grade_col_start + 1, fmt_qty(qty), fmt_number)
+                        sheet.write(grade_row, grade_col_start + 2, fmt_qty(total), fmt_grade_total)
+                        sheet.write(grade_row, grade_col_start + 3, uom, fmt_grade)
 
-                    uom_str = " | ".join(uom_data.keys())
-
-                    sheet.write(grade_row, grade_col_start, p_name, fmt_text_center)
-                    sheet.write(grade_row, grade_col_start + 1, qty_str or "-", fmt_number)
-                    sheet.write(grade_row, grade_col_start + 2, total_str or "-", fmt_grade_total)
-                    sheet.write(grade_row, grade_col_start + 3, uom_str or "-", fmt_grade)
-
-                    grade_row += 1
+                        grade_row += 1
 
             # ================= TOTAL SELURUH GRADE & RATA-RATA =================
             total_all_grades = 0

@@ -690,20 +690,15 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             max_lines = len(grouped_list)
 
                     for line_index in range(max_lines):
-
-                        grouped_list_first = next(
+                        uom_str = next(
                             (
-                                oven_grouped_data.get(oven, [])
+                                grouped_list[line_index]["uom"]
                                 for oven in oven_list
-                                if oven_grouped_data.get(oven, [])
+                                for grouped_list in [oven_grouped_data.get(oven, [])]
+                                if line_index < len(grouped_list)
                             ),
-                            []
+                            ""
                         )
-
-                        if line_index < len(grouped_list_first):
-                            uom_str = grouped_list_first[line_index]["uom"]
-                        else:
-                            uom_str = ""
 
                         display_name = (
                             f"{product_name} ({uom_str})"
