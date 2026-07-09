@@ -647,9 +647,19 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 products = sorted(product_per_oven.keys())
 
                 for product_name in products:
-                    max_lines = 1
-
                     oven_grouped_data = {}
+
+                    # Ambil seluruh UOM dari semua oven untuk produk ini
+                    all_uoms = sorted(
+                        {
+                            item["uom"]
+                            for oven_items in product_per_oven[product_name].values()
+                            for item in oven_items
+                        },
+                        key=lambda x: x.lower()
+                    )
+
+                    max_lines = len(all_uoms)
 
                     for oven in oven_list:
                         items = product_per_oven[product_name].get(oven, [])
@@ -659,49 +669,33 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             grouped.setdefault(item["uom"], [])
                             grouped[item["uom"]].append(item["qty"])
 
-                        grouped_list = [
-                            {
+                        grouped_list = []
+
+                        for uom in all_uoms:
+                            qtys = grouped.get(uom, [])
+
+                            grouped_list.append({
                                 "uom": uom,
-                                "qty_str": " | ".join(str(fmt_qty(q)) for q in qtys)
-                            }
-                            for uom, qtys in grouped.items()
-                        ]
+                                "qty_str": " | ".join(str(fmt_qty(q)) for q in qtys) if qtys else "-"
+                            })
 
                         oven_grouped_data[oven] = grouped_list
 
-                        if len(grouped_list) > max_lines:
-                            max_lines = len(grouped_list)
-
                     for line_index in range(max_lines):
-                        uom_str = next(
-                            (
-                                grouped_list[line_index]["uom"]
-                                for oven in oven_list
-                                for grouped_list in [oven_grouped_data.get(oven, [])]
-                                if line_index < len(grouped_list)
-                            ),
-                            ""
-                        )
+                        uom_str = all_uoms[line_index]
 
-                        display_name = (
-                            f"{product_name} ({uom_str})"
-                            if uom_str else product_name
-                        )
+                        display_name = f"{product_name} ({uom_str})"
 
                         sheet.write(row + line_index, 0, display_name, fmt_grade)
 
                         col = 1
 
                         for oven in oven_list:
-                            grouped_list = oven_grouped_data.get(oven, [])
+                            data = oven_grouped_data[oven][line_index]
 
-                            if line_index < len(grouped_list):
-                                data = grouped_list[line_index]
-                                qty_str = data["qty_str"]
-                                uom_str = data["uom"]
-
-                                sheet.write(row + line_index, col, qty_str, fmt_number)
-                                sheet.write(row + line_index, col + 1, uom_str, fmt_text_center)
+                            if data["qty_str"] != "-":
+                                sheet.write(row + line_index, col, data["qty_str"], fmt_number)
+                                sheet.write(row + line_index, col + 1, data["uom"], fmt_text_center)
                             else:
                                 sheet.write(row + line_index, col, "-", fmt_number)
                                 sheet.write(row + line_index, col + 1, "-", fmt_text_center)
@@ -709,7 +703,6 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             col += 2
 
                     row += max_lines
-
 
             # ================= TOTAL ROW =================
             sheet.write(row, 0, "TOTAL QTY (KG)", fmt_header)
