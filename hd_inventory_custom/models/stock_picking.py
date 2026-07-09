@@ -6,6 +6,7 @@ import logging
 from odoo.tools.float_utils import float_compare, float_is_zero
 from collections import defaultdict
 from odoo.exceptions import UserError, ValidationError
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -13,12 +14,12 @@ class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
     pemilik_ids = fields.Many2many('res.partner', 'stock_picking_owner_rel', 'picking_id', 'owner_id', string="Owners", help="Owner yang terlibat pada stock move.")
-    btb_number = fields.Char(string="No. BTB", readonly=True, copy=False)
+    btb_number = fields.Char(string="No. BTB", readonly=False, copy=False)
     partner_ref = fields.Char('Vendor Reference', copy=False, help="Reference of the sales order or bid sent by the vendor.")
     consume_move_ids = fields.One2many('stock.move', 'picking_id', string='Consume Moves', domain=[('is_consume', '=', True)])    
     move_ids_without_package = fields.One2many('stock.move', 'picking_id', string="Stock move", domain=['|', ('package_level_id', '=', False), ('picking_type_entire_packs', '=', False), ('is_consume', '=', False)])    
     sparepart_usage_attachment = fields.Many2many('ir.attachment', 'stock_picking_sparepart_attachment_rel', 'picking_id', 'attachment_id', string="Damage Evidence Attachment", help="Lampiran bukti sparepart sebelumnya rusak.")
-    is_sparepart_usage = fields.Boolean(string="Is Sparepart Usage")
+    is_sparepart_usage = fields.Boolean(string="Is Sparepart Usage", compute="_compute_is_sparepart_usage", store=True)
     requestor_id = fields.Many2one('res.users', string='Requestor', tracking=True, states={'draft': [('readonly', False)]},)
     return_picking_ids = fields.One2many('stock.picking', 'origin_picking_id', string="Return Pickings")    
     return_count = fields.Integer(string="Return Count", compute="_compute_return_count")
@@ -27,30 +28,6 @@ class StockPicking(models.Model):
     def _compute_return_count(self):
         for rec in self:
             rec.return_count = self.env['stock.picking'].search_count([('origin_picking_id', '=', rec.id)])    
-
-    allowed_warehouse_ids = fields.Many2many("stock.warehouse", readonly=True)
-
-    @api.model
-    def default_get(self, fields_list):
-        res = super().default_get(fields_list)
-
-        if self.env.context.get("clear_sparepart_defaults"):
-            res.update({
-                "picking_type_id": False,
-                "location_id": False,
-                "location_dest_id": False,
-                "is_sparepart_usage": True
-            })        
-
-        if "allowed_warehouse_ids" in fields_list:
-            if self.env.user.allowed_warehouse_ids:
-                warehouses = self.env.user.allowed_warehouse_ids
-            else:
-                warehouses = self.env["stock.warehouse"].search([])
-
-            res["allowed_warehouse_ids"] = [(6, 0, warehouses.ids)]
-
-        return res
 
     def action_view_return_pickings(self):
         return {
@@ -78,6 +55,16 @@ class StockPicking(models.Model):
                 'default_is_return_sparepart': True
             }
         }    
+
+    @api.depends('picking_type_id')
+    def _compute_is_sparepart_usage(self):
+        picking_type = self.env.ref('hd_inventory_custom.picking_type_sparepart_usage', raise_if_not_found=False)
+
+        for rec in self:
+            rec.is_sparepart_usage = bool(
+                picking_type
+                and rec.picking_type_id.id == picking_type.id
+            )
 
     def _validate_consume_products(self, picking):
         errors = []
@@ -151,6 +138,50 @@ class StockPicking(models.Model):
 
         return scrap_location
 
+    # def _compute_btb_number_old(self):
+    #     for picking in self.filtered(lambda p: p.picking_type_code == 'incoming'):
+    #         date_ref = picking.scheduled_date or picking.create_date
+    #         date_ref = fields.Datetime.context_timestamp(picking, date_ref)
+
+    #         tahun = date_ref.strftime('%y')
+    #         bulan_romawi = self._get_bulan_romawi(date_ref.month)
+
+    #         start_month = date_ref.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    #         end_month = (start_month + relativedelta(months=1)) - timedelta(microseconds=1)
+    #         warehouse_id = picking.picking_type_id.warehouse_id.id
+
+    #         domain = [
+    #             ('picking_type_code', '=', 'incoming'),
+    #             ('btb_number', '!=', False),
+    #             ('scheduled_date', '>=', start_month),
+    #             ('scheduled_date', '<=', end_month),
+    #             ('picking_type_id.warehouse_id', '=', warehouse_id),
+    #         ]
+
+    #         last = self.env['stock.picking'].sudo().search(domain, order='id desc', limit=1)
+
+    #         if last and last.btb_number:
+    #             try:
+    #                 last_urutan = int(last.btb_number.split('/')[1])
+    #                 urutan = last_urutan + 1
+    #             except Exception:
+    #                 urutan = 1
+    #         else:
+    #             urutan = 1
+
+    #         warehouse = picking.picking_type_id.warehouse_id
+    #         warehouse_code = warehouse.code if warehouse else 'NA'
+
+    #         btb_number = f"BTB/{urutan:02d}/{bulan_romawi}/{tahun}/{warehouse_code}"
+
+    #         picking.sudo().write({'btb_number': btb_number})
+
+    #         # update ke PO
+    #         if picking.origin:
+    #             po = self.env['purchase.order'].sudo().search([('name','=', picking.origin)], limit=1)
+    #             if po:
+    #                 po.write({'btb_number': btb_number})
+
     def _compute_btb_number(self):
         for picking in self.filtered(lambda p: p.picking_type_code == 'incoming'):
             date_ref = picking.scheduled_date or picking.create_date
@@ -161,7 +192,10 @@ class StockPicking(models.Model):
 
             start_month = date_ref.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             end_month = (start_month + relativedelta(months=1)) - timedelta(microseconds=1)
-            warehouse_id = picking.picking_type_id.warehouse_id.id
+
+            warehouse = picking.picking_type_id.warehouse_id
+            warehouse_id = warehouse.id
+            warehouse_code = warehouse.code if warehouse else 'NA'
 
             domain = [
                 ('picking_type_code', '=', 'incoming'),
@@ -171,19 +205,19 @@ class StockPicking(models.Model):
                 ('picking_type_id.warehouse_id', '=', warehouse_id),
             ]
 
-            last = self.env['stock.picking'].sudo().search(domain, order='id desc', limit=1)
+            existing_pickings = self.env['stock.picking'].sudo().search_fetch(domain, ['btb_number'])
 
-            if last and last.btb_number:
-                try:
-                    last_urutan = int(last.btb_number.split('/')[1])
-                    urutan = last_urutan + 1
-                except Exception:
-                    urutan = 1
-            else:
-                urutan = 1
-
-            warehouse = picking.picking_type_id.warehouse_id
-            warehouse_code = warehouse.code if warehouse else 'NA'
+            urutan = 1
+            if existing_pickings:
+                btb_urutan_list = []
+                for pick in existing_pickings:
+                    parts = pick.btb_number.split('/')
+                    if len(parts) > 1:
+                        digits = re.findall(r'^\d+', parts[1])
+                        if digits:
+                            btb_urutan_list.append(int(digits[0]))
+                if btb_urutan_list:
+                    urutan = max(btb_urutan_list) + 1
 
             btb_number = f"BTB/{urutan:02d}/{bulan_romawi}/{tahun}/{warehouse_code}"
 
@@ -191,7 +225,7 @@ class StockPicking(models.Model):
 
             # update ke PO
             if picking.origin:
-                po = self.env['purchase.order'].sudo().search([('name','=', picking.origin)], limit=1)
+                po = self.env['purchase.order'].sudo().search([('name', '=', picking.origin)], limit=1)
                 if po:
                     po.write({'btb_number': btb_number})
 
@@ -224,15 +258,8 @@ class StockPicking(models.Model):
                             move.product_uom.name,
                         ))
 
-        self._compute_btb_number()
-        for ml in picking.move_line_ids:
-            _logger.info(
-                "qty=%.17f rounding=%.17f",
-                ml.quantity,
-                ml.product_uom_id.rounding,
-            )      
-     
-        res = super().button_validate()            
+        # self._compute_btb_number()
+        res = super().button_validate()
 
         for picking in self:
             if self.env['stock.move'].search([
@@ -263,7 +290,7 @@ class StockPicking(models.Model):
                     else:
                         for ml in move.move_line_ids:
                             ml.quantity = move.product_uom_qty
-            
+
                 moves._action_done()
 
         return res
@@ -276,60 +303,117 @@ class StockPicking(models.Model):
         }
         return romawi.get(bulan, '')
 
-    @api.model
-    def create(self, vals):
-        picking = super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            picking_type_id = vals.get('picking_type_id', False)
+            if picking_type_id:
+                picking_type = self.env['stock.picking.type'].sudo().browse(picking_type_id)
 
-        if picking.picking_type_code != 'incoming' or picking.btb_number:
-            return picking
+                if picking_type.code == 'incoming':
+                    warehouse = picking_type.warehouse_id
+                    warehouse_code = warehouse.code if warehouse else 'NA'
+                    warehouse_id = warehouse.id
 
-        date_now = fields.Datetime.context_timestamp(
-            picking, fields.Datetime.now()
-        )
+                    scheduled_date = vals.get('scheduled_date', False) or fields.Datetime.now()
+                    if isinstance(scheduled_date, str):
+                        scheduled_date = fields.Datetime.from_string(scheduled_date)
 
-        tahun = date_now.strftime('%y')
-        bulan_romawi = self._get_bulan_romawi(date_now.month)
+                    date_ref = fields.Datetime.context_timestamp(self, scheduled_date)
 
-        start_month = date_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_month = (start_month + relativedelta(months=1)) - timedelta(microseconds=1)
+                    tahun = date_ref.strftime('%y')
+                    bulan_romawi = self._get_bulan_romawi(date_ref.month)
 
-        domain = [
-            ('picking_type_code', '=', 'incoming'),
-            ('btb_number', '!=', False),
-            ('create_date', '>=', start_month),
-            ('create_date', '<=', end_month),
-        ]
+                    start_month = date_ref.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                    end_month = (start_month + relativedelta(months=1)) - timedelta(microseconds=1)
 
-        last = self.env['stock.picking'].sudo().search(
-            domain,
-            order='id desc',
-            limit=1
-        )
+                    domain = [
+                        ('picking_type_code', '=', 'incoming'),
+                        ('btb_number', '!=', False),
+                        ('scheduled_date', '>=', start_month),
+                        ('scheduled_date', '<=', end_month),
+                        ('picking_type_id.warehouse_id', '=', warehouse_id),
+                    ]
 
-        if last and last.btb_number:
-            try:
-                last_urutan = int(last.btb_number.split('/')[1])
-                urutan = last_urutan + 1
-            except Exception:
-                urutan = 1
-        else:
-            urutan = 1
+                    existing_pickings = self.env['stock.picking'].sudo().search_fetch(domain, ['btb_number'])
 
-        warehouse = picking.picking_type_id.warehouse_id
-        warehouse_code = warehouse.code if warehouse else 'NA'
+                    urutan = 1
+                    if existing_pickings:
+                        btb_urutan_list = []
+                        for pick in existing_pickings:
+                            parts = pick.btb_number.split('/')
+                            if len(parts) > 1:
+                                digits = re.findall(r'^\d+', parts[1])
+                                if digits:
+                                    btb_urutan_list.append(int(digits[0]))
+                        if btb_urutan_list:
+                            urutan = max(btb_urutan_list) + 1
 
-        btb_number = 'BTB/%02d/%s/%s/%s' % (urutan, bulan_romawi, tahun, warehouse_code)
+                    vals['btb_number'] = f"BTB/{urutan:02d}/{bulan_romawi}/{tahun}/{warehouse_code}"
 
-        picking.sudo().write({'btb_number': btb_number})
+        pickings = super().create(vals_list)
+        for picking in pickings:
+            if picking.picking_type_code == 'incoming' and picking.btb_number and picking.origin:
+                po = self.env['purchase.order'].sudo().search([('name', '=', picking.origin)], limit=1)
+                if po:
+                    po.write({'btb_number': picking.btb_number})
 
-        if picking.origin:
-            po = self.env['purchase.order'].sudo().search([
-                ('name', '=', picking.origin)
-            ], limit=1)
+        return pickings
 
-            if po:
-                po.write({'btb_number': btb_number})
-        return picking
+    # @api.model
+    # def create(self, vals):
+    #     picking = super().create(vals)
+
+    #     if picking.picking_type_code != 'incoming' or picking.btb_number:
+    #         return picking
+
+    #     date_now = fields.Datetime.context_timestamp(
+    #         picking, fields.Datetime.now()
+    #     )
+
+    #     tahun = date_now.strftime('%y')
+    #     bulan_romawi = self._get_bulan_romawi(date_now.month)
+
+    #     start_month = date_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    #     end_month = (start_month + relativedelta(months=1)) - timedelta(microseconds=1)
+
+    #     domain = [
+    #         ('picking_type_code', '=', 'incoming'),
+    #         ('btb_number', '!=', False),
+    #         ('create_date', '>=', start_month),
+    #         ('create_date', '<=', end_month),
+    #     ]
+
+    #     last = self.env['stock.picking'].sudo().search(
+    #         domain,
+    #         order='id desc',
+    #         limit=1
+    #     )
+
+    #     if last and last.btb_number:
+    #         try:
+    #             last_urutan = int(last.btb_number.split('/')[1])
+    #             urutan = last_urutan + 1
+    #         except Exception:
+    #             urutan = 1
+    #     else:
+    #         urutan = 1
+
+    #     warehouse = picking.picking_type_id.warehouse_id
+    #     warehouse_code = warehouse.code if warehouse else 'NA'
+
+    #     btb_number = 'BTB/%02d/%s/%s/%s' % (urutan, bulan_romawi, tahun, warehouse_code)
+
+    #     picking.sudo().write({'btb_number': btb_number})
+
+    #     if picking.origin:
+    #         po = self.env['purchase.order'].sudo().search([
+    #             ('name', '=', picking.origin)
+    #         ], limit=1)
+
+    #         if po:
+    #             po.write({'btb_number': btb_number})
+    #     return picking
 
     def write(self, vals):
         res = super().write(vals)
