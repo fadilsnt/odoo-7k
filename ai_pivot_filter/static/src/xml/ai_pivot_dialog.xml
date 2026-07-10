@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="ai_pivot_filter.AiPivotDialog">
+        <Dialog title="'AI Filter'" size="'md'">
+            <div class="ai_pivot_filter_dialog">
+                <!-- <p class="text-muted">
+                    Ketik instruksi dalam bahasa natural untuk mengubah filter / measure pada tampilan pivot ini
+                </p> -->
+                <textarea
+                    class="form-control"
+                    rows="3"
+                    placeholder="Tulis instruksi filter di sini..."
+                    t-model="state.text"
+                    t-att-disabled="state.loading"
+                />
+            </div>
+            <t t-set-slot="footer">
+                <button
+                    class="btn btn-primary"
+                    t-on-click="onSend"
+                    t-att-disabled="state.loading"
+                >
+                    <t t-if="state.loading">Memproses...</t>
+                    <t t-else="">Terapkan Filter</t>
+                </button>
+                <button class="btn btn-secondary" t-on-click="() => this.props.close()">
+                    Batal
+                </button>
+            </t>
+        </Dialog>
+    </t>
+</templates>
