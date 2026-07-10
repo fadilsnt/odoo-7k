@@ -21,6 +21,11 @@ class StockMoveLine(models.Model):
     from_wizard = fields.Boolean(default=False)
     product_uom_id = fields.Many2one('uom.uom', string='Unit of Measure', required=True, domain="[('category_id', '=', product_uom_category_id)]", readonly=True)
 
+    # =========================================================
+    # PHYSICAL INVENTORY
+    # =========================================================
+    notes = fields.Text(string="Keterangan", related='move_id.notes', store=True)
+
     @api.depends('move_id', 'move_id.tonase_asli')
     def _compute_tonase_asli(self):
         for rec in self:
