@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_ai_pivot" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.ai.pivot.filter</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="AI Pivot Filter" string="AI Pivot Filter" name="ai_pivot_filter">
+                    <block title="AI Credentials" name="ai_pivot_filter_setting_container">
+                        <setting id="ai_pivot_groq_api_key_setting" string="API Key">
+                            <field name="ai_pivot_groq_api_key" password="True"/>
+                        </setting>
+                        <setting id="ai_pivot_groq_model_setting" string="Model">
+                            <field name="ai_pivot_groq_model"/>
+                        </setting>
+                        <setting id="ai_pivot_groq_base_url_setting" string="Base URL">
+                            <field name="ai_pivot_groq_base_url"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

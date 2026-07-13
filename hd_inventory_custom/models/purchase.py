@@ -10,7 +10,7 @@ _logger = logging.getLogger(__name__)
 class PurchaseOrder(models.Model):
     _inherit = 'purchase.order'
 
-    btb_number = fields.Char(string="No. BTB", readonly=True, copy=False)
+    btb_number = fields.Char(string="No. BTB", readonly=False, copy=False)
     vendor_invoice_date = fields.Date(string="Tanggal Invoice Vendor")
 
     def _prepare_picking(self):

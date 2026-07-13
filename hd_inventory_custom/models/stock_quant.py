@@ -19,6 +19,11 @@ class StockQuant(models.Model):
     inventory_tonase_asli_auto_apply = fields.Float( string='Inventoried Tonase Asli', compute='_compute_inventory_tonase_asli_auto_apply', inverse='_set_inventory_tonase_asli', groups='stock.group_stock_manager', digits='Product Unit of Measure')
     inventory_tonase_asli_diff = fields.Float( string='Tonase Difference', compute='_compute_inventory_tonase_asli_diff', store=True, readonly=True, digits='Product Unit of Measure', help='Selisih tonase teoritis vs hasil hitung')    
 
+    # =========================================================
+    # PHYSICAL INVENTORY
+    # =========================================================
+    notes = fields.Text(string="Keterangan")
+
     def _apply_inventory(self):
         res = super()._apply_inventory()
 
@@ -26,6 +31,7 @@ class StockQuant(models.Model):
             if quant.inventory_tonase_asli is not None:
                 quant.tonase_asli = quant.inventory_tonase_asli
 
+        self.notes = ''
         return res
 
     def _get_inventory_move_values(
@@ -50,6 +56,9 @@ class StockQuant(models.Model):
 
         if tonase:
             vals['move_line_ids'][0][2]['tonase_asli'] = tonase
+        
+        if self.notes:
+            vals['notes'] = self.notes
 
         return vals
 
@@ -144,4 +153,4 @@ class StockQuant(models.Model):
             return
 
         for quant in self:
-            quant.inventory_tonase_asli = quant.inventory_tonase_asli_auto_apply            
+            quant.inventory_tonase_asli = quant.inventory_tonase_asli_auto_apply

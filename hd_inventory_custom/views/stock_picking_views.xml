@@ -11,7 +11,7 @@
             </xpath>
 
             <xpath expr="//field[@name='move_ids_without_package']//list//field[@name='product_uom']" position="after">
-                <field name="tonase_asli" readonly="is_tonase_move_line"/>
+                <field name="tonase_asli"/>
                 <field name="is_tonase_move_line" column_invisible="1"/>
             </xpath>            
 
@@ -72,7 +72,7 @@
             </xpath>      
 
             <xpath expr="//field[@name='origin']" position="after">
-                <field name="btb_number" invisible="not btb_number" readonly="1"/>
+                <field name="btb_number" readonly="state in ['cancel', 'done']"/>
                 <field name="partner_ref" readonly="1" invisible="not partner_ref"/>
             </xpath>
         </field>
@@ -355,12 +355,7 @@
                     </div>  
                     <group string="Operation Information">
                         <group>
-                            <field name="allowed_warehouse_ids" invisible="1"/>
-                            <field name="picking_type_id"
-                                domain="[
-                                    ('default_location_dest_id', '=', %(hd_inventory_custom.stock_location_sparepart_usage)d),
-                                    ('warehouse_id', 'in', allowed_warehouse_ids)
-                                ]" force_save="1"/>                        
+                            <field name="picking_type_id" domain="[('default_location_dest_id', '=', %(hd_inventory_custom.stock_location_sparepart_usage)d)]" readonly="state == 'done'"/>
                         </group>
 
                         <group>
@@ -380,11 +375,11 @@
                         <group>
                             <field name="requestor_id" readonly="state in ['confirmed', 'waiting', 'assigned', 'done']" required="is_sparepart_usage"/>
                             <field name="scheduled_date" readonly="state in ['confirmed', 'waiting', 'assigned', 'done']"/>
-                            <field name="sparepart_usage_attachment" widget="many2many_binary" readonly="state in ['confirmed', 'waiting', 'assigned', 'done']"/>
+                            <field name="sparepart_usage_attachment" invisible="not is_sparepart_usage" widget="many2many_binary" readonly="state in ['confirmed', 'waiting', 'assigned', 'done']"/>
                         </group>
                         <group>
-                            <field name="location_id" readonly="1" force_save="1"/>
-                            <field name="location_dest_id" readonly="1" force_save="1"/>
+                            <field name="location_id" readonly="1"/>
+                            <field name="location_dest_id" readonly="1"/>
                         </group>
                     </group>                                  
                     <notebook>
@@ -464,12 +459,14 @@
                 (0, 0, {'view_mode': 'list','view_id': ref('hd_inventory_custom.view_stock_picking_sparepart_usage_tree')}),
                 (0, 0, {'view_mode': 'form','view_id': ref('hd_inventory_custom.view_stock_picking_sparepart_usage_form')})
             ]"/>        
-        <field name="search_view_id" ref="hd_inventory_custom.view_stock_picking_sparepart_usage_search"/>     
-        <field name="domain" eval="[('location_dest_id', '=', ref('hd_inventory_custom.stock_location_sparepart_usage'))]"/>
+        <field name="search_view_id" ref="hd_inventory_custom.view_stock_picking_sparepart_usage_search"/>
+        <field name="domain" eval="[('picking_type_id', '=', ref('hd_inventory_custom.picking_type_sparepart_usage'))]"/>
         <field name="context"
             eval="{
-                'clear_sparepart_defaults': True,
-            }"/>         
+                'default_picking_type_id': ref('hd_inventory_custom.picking_type_sparepart_usage'),
+                'default_location_id': ref('stock.stock_location_stock'),
+                'default_location_dest_id': ref('hd_inventory_custom.stock_location_sparepart_usage'),
+            }"/>
     </record>
 
     <menuitem id="menu_sparepart_request" name="Usage Request" parent="stock.menu_stock_transfers" action="action_stock_picking_sparepart_usage" sequence="25"/>           
