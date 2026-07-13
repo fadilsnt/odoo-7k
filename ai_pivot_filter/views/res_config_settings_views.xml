@@ -7,15 +7,18 @@
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
                 <app data-string="AI Pivot Filter" string="AI Pivot Filter" name="ai_pivot_filter">
-                    <block title="AI Credentials" name="ai_pivot_filter_setting_container">
-                        <setting id="ai_pivot_groq_api_key_setting" string="API Key">
-                            <field name="ai_pivot_groq_api_key" password="True"/>
+                    <block title="AI Provider" name="ai_pivot_filter_setting_container">
+                        <setting id="ai_pivot_provider_setting" string="AI Provider">
+                            <field name="ai_pivot_provider" widget="radio"/>
                         </setting>
-                        <setting id="ai_pivot_groq_model_setting" string="Model">
-                            <field name="ai_pivot_groq_model"/>
+                        <setting id="ai_pivot_api_key_setting" string="API Key">
+                            <field name="ai_pivot_api_key" password="True"/>
                         </setting>
-                        <setting id="ai_pivot_groq_base_url_setting" string="Base URL">
-                            <field name="ai_pivot_groq_base_url"/>
+                        <setting id="ai_pivot_model_setting" string="Model">
+                            <field name="ai_pivot_model"/>
+                        </setting>
+                        <setting id="ai_pivot_base_url_setting" string="Base URL">
+                            <field name="ai_pivot_base_url"/>
                         </setting>
                     </block>
                 </app>

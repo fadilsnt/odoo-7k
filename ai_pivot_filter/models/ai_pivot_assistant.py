@@ -17,6 +17,12 @@ DEFAULT_MODEL = "qwen/qwen3-32b"
 DEFAULT_BASE_URL = "https://api.groq.com/openai/v1"
 TIMEOUT = 30
 
+PROVIDER_LABELS = {
+    'groq': 'Groq',
+    'opencode_zen': 'OpenCode Zen (opencode.ai/zen)',
+    'custom': 'Custom Provider',
+}
+
 MEASURE_TYPES = ("integer", "float", "monetary")
 IGNORED_FIELDS = ("__last_update", "display_name", "create_uid", "write_uid", "id")
 
@@ -26,23 +32,44 @@ _DAY_NAMES_ID = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 
 class AiPivotAssistant(models.AbstractModel):
     _name = 'ai.pivot.assistant'
-    _description = 'AI Pivot Assistant (Groq)'
+    _description = 'AI Pivot Assistant (multi-provider, OpenAI-compatible)'
 
     def _get_config(self):
         icp = self.env['ir.config_parameter'].sudo()
-        api_key = icp.get_param('ai_pivot_filter.groq_api_key', default='')
-        model = icp.get_param('ai_pivot_filter.groq_model', default=DEFAULT_MODEL)
-        base_url = icp.get_param('ai_pivot_filter.groq_base_url', default=DEFAULT_BASE_URL)
-        return api_key, model, base_url
+        provider = icp.get_param('ai_pivot_filter.provider', default='groq')
+
+        # Baca parameter generik yang baru. Jika belum pernah diisi (mis.
+        # instalasi lama sebelum modul ini mendukung banyak provider),
+        # fallback ke parameter lama 'groq_*' supaya konfigurasi existing
+        # tidak hilang setelah upgrade modul.
+        api_key = icp.get_param('ai_pivot_filter.api_key', default='') \
+            or icp.get_param('ai_pivot_filter.groq_api_key', default='')
+        model = icp.get_param('ai_pivot_filter.model', default='') \
+            or icp.get_param('ai_pivot_filter.groq_model', default=DEFAULT_MODEL)
+        base_url = icp.get_param('ai_pivot_filter.base_url', default='') \
+            or icp.get_param('ai_pivot_filter.groq_base_url', default=DEFAULT_BASE_URL)
+        return api_key, model, base_url, provider
 
     @api.model
     def generate_pivot_state(self, model_name, user_text, current_domain=None, current_measures=None,
                               current_row_groupby=None, current_col_groupby=None):
-        api_key, model, base_url = self._get_config()
+        api_key, model, base_url, provider = self._get_config()
+        provider_label = PROVIDER_LABELS.get(provider, provider or 'AI')
         if not api_key:
             raise UserError(
-                "API Key Groq belum diisi. Buka Settings > Technical > "
-                "AI Pivot Filter (Groq) untuk mengisi kredensial."
+                "API Key %s belum diisi. Buka Settings > General Settings > "
+                "AI Pivot Filter untuk memilih provider dan mengisi "
+                "kredensial." % provider_label
+            )
+        if not base_url:
+            raise UserError(
+                "Base URL untuk provider %s belum diisi. Buka Settings > "
+                "General Settings > AI Pivot Filter untuk mengisinya." % provider_label
+            )
+        if not model:
+            raise UserError(
+                "Model untuk provider %s belum diisi. Buka Settings > "
+                "General Settings > AI Pivot Filter untuk mengisinya." % provider_label
             )
 
         if model_name not in self.env:
@@ -62,34 +89,50 @@ class AiPivotAssistant(models.AbstractModel):
         )
 
         try:
-            result = self._call_groq(api_key, model, base_url, prompt)
+            result = self._call_llm(api_key, model, base_url, prompt)
         except UserError:
             raise
         except Exception as exc:  # noqa: BLE001
-            _logger.exception("AI Pivot Filter: Groq call failed")
-            raise UserError("Gagal menghubungi AI: %s" % exc)
+            _logger.exception("AI Pivot Filter: %s call failed", provider_label)
+            raise UserError("Gagal menghubungi AI (%s): %s" % (provider_label, exc))
 
         domain = result.get('domain', [])
         if not isinstance(domain, list):
             domain = []
 
+        dropped_notes = []
+
         valid_domain_fields = self._extract_domain_field_names(domain_fields_info)
-        domain = self._sanitize_domain(domain, valid_domain_fields)
+        domain = self._sanitize_domain(domain, valid_domain_fields, dropped_notes)
 
         raw_measures = result.get('measures')
         if isinstance(raw_measures, list):
             measures = [m for m in raw_measures if m in valid_measures]
+            invalid_measures = [m for m in raw_measures if m not in valid_measures]
+            if invalid_measures:
+                dropped_notes.append(
+                    "Measure %s tidak dikenali di model ini dan diabaikan."
+                    % ", ".join(str(m) for m in invalid_measures)
+                )
         else:
             measures = None
 
-        row_groupby = self._sanitize_groupby(result.get('row_groupby'), valid_domain_fields)
-        col_groupby = self._sanitize_groupby(result.get('col_groupby'), valid_domain_fields)
+        row_groupby = self._sanitize_groupby(result.get('row_groupby'), valid_domain_fields, dropped_notes, 'baris')
+        col_groupby = self._sanitize_groupby(result.get('col_groupby'), valid_domain_fields, dropped_notes, 'kolom')
+
+        ai_note = result.get('catatan') or result.get('note') or result.get('message')
+        message_parts = []
+        if isinstance(ai_note, str) and ai_note.strip():
+            message_parts.append(ai_note.strip())
+        message_parts.extend(dropped_notes)
+        message = " ".join(message_parts) if message_parts else None
 
         return {
             'domain': domain,
             'measures': measures,
             'row_groupby': row_groupby,
             'col_groupby': col_groupby,
+            'message': message,
         }
 
     def _get_domain_fields(self, model_name):
@@ -131,10 +174,11 @@ class AiPivotAssistant(models.AbstractModel):
                 names.add(fname)
         return names
 
-    def _sanitize_domain(self, domain, valid_fields):
+    def _sanitize_domain(self, domain, valid_fields, dropped_notes=None):
         if not valid_fields:
             return domain
         cleaned = []
+        dropped_fields = []
         for item in domain:
             if item in ('&', '|', '!'):
                 cleaned.append(item)
@@ -146,16 +190,25 @@ class AiPivotAssistant(models.AbstractModel):
                 _logger.warning(
                     "AI Pivot Filter: dropping unrecognized domain leaf %r", item
                 )
+                if isinstance(item, (list, tuple)) and item:
+                    dropped_fields.append(str(item[0]))
+        if dropped_fields and dropped_notes is not None:
+            dropped_notes.append(
+                "Filter pada field %s tidak diterapkan karena field tersebut "
+                "tidak tersedia/tidak cocok di model ini."
+                % ", ".join(sorted(set(dropped_fields)))
+            )
         return cleaned
 
     VALID_GROUPBY_INTERVALS = ('day', 'week', 'month', 'quarter', 'year')
 
-    def _sanitize_groupby(self, groupby, valid_fields):
+    def _sanitize_groupby(self, groupby, valid_fields, dropped_notes=None, axis_label=None):
         if not isinstance(groupby, list):
             return None
         if not valid_fields:
             return [g for g in groupby if isinstance(g, str)]
         cleaned = []
+        dropped_fields = []
         for entry in groupby:
             if not isinstance(entry, str):
                 continue
@@ -166,11 +219,18 @@ class AiPivotAssistant(models.AbstractModel):
                 _logger.warning(
                     "AI Pivot Filter: dropping unrecognized groupby field %r", entry
                 )
+                dropped_fields.append(fname or entry)
                 continue
             if interval and interval not in self.VALID_GROUPBY_INTERVALS:
                 cleaned.append(fname)
             else:
                 cleaned.append(entry)
+        if dropped_fields and dropped_notes is not None:
+            dropped_notes.append(
+                "Pengelompokan %s pada field %s tidak diterapkan karena field "
+                "tersebut tidak tersedia di model ini."
+                % (axis_label or '', ", ".join(sorted(set(dropped_fields))))
+            )
         return cleaned
 
     def _get_measure_fields(self, model_name):
@@ -290,7 +350,21 @@ class AiPivotAssistant(models.AbstractModel):
             "   {\"domain\": [[\"field\", \"operator\", value], ...], "
             "\"measures\": [\"field1\", \"field2\", ...], "
             "\"row_groupby\": [\"field1\", ...], "
-            "\"col_groupby\": [\"field1\", ...]}\n"
+            "\"col_groupby\": [\"field1\", ...], "
+            "\"catatan\": \"\"}\n"
+            "   Key \"catatan\" WAJIB selalu ada (boleh string kosong \"\" jika "
+            "tidak ada yang perlu dijelaskan). Isi \"catatan\" dengan penjelasan "
+            "singkat (1-2 kalimat, Bahasa Indonesia) HANYA jika: (a) ada bagian "
+            "instruksi user yang TIDAK BISA dipenuhi karena tidak ada field yang "
+            "cocok di daftar field model ini (mis. user minta filter/tampilan "
+            "berdasarkan sesuatu yang tidak ada datanya di model ini), atau (b) "
+            "kamu membuat asumsi penting yang mungkin tidak diharapkan user "
+            "(mis. memilih salah satu dari dua kemungkinan axis baris/kolom "
+            "yang ambigu). JANGAN mengarang nama field hanya supaya instruksi "
+            "'kelihatan' terpenuhi — kalau field yang benar-benar cocok tidak "
+            "ada di daftar, LEBIH BAIK biarkan bagian itu tidak berubah dan "
+            "jelaskan alasannya di \"catatan\", daripada menebak field yang "
+            "salah.\n"
             "3. DOMAIN — gunakan hanya nama field dari daftar field di atas. "
             "Operator valid: '=', '!=', '>', '>=', '<', '<=', 'in', 'not in', "
             "'like', 'ilike', 'not ilike'. Untuk tanggal pakai 'YYYY-MM-DD'. "
@@ -333,6 +407,27 @@ class AiPivotAssistant(models.AbstractModel):
             "— row_groupby yang aktif SAAT INI adalah: "
             f"{current_row_groupby}. col_groupby yang aktif SAAT INI adalah: "
             f"{current_col_groupby}.\n"
+            "   - PENTING — pemetaan tata letak tabel pivot Odoo: row_groupby "
+            "adalah daftar yang tampil MEMANJANG KE BAWAH di sisi KIRI tabel "
+            "(baris demi baris). col_groupby adalah daftar yang tampil sebagai "
+            "HEADER DI BAGIAN PALING ATAS tabel dan melebar/bertambah KE "
+            "KANAN. Gunakan pemetaan kata berikut bila user memakai istilah "
+            "posisi: 'baris'/'ke bawah'/'kiri'/'menurun' -> row_groupby; "
+            "'kolom'/'di atas'/'ke kanan'/'header atas'/'melebar' -> "
+            "col_groupby. Jika istilah posisi yang dipakai user ambigu atau "
+            "membingungkan, JANGAN menebak-nebak dengan agresif — pilih "
+            "interpretasi yang paling masuk akal secara laporan (biasanya "
+            "dimensi yang disebut PERTAMA dalam kalimat menjadi row_groupby "
+            "dan dimensi yang disebut KEDUA menjadi col_groupby, karena pola "
+            "umum laporan pivot adalah 'per <dimensi baris>, dipecah per "
+            "<dimensi kolom>'), lalu jelaskan asumsi ini secara singkat di "
+            "\"catatan\".\n"
+            "   - Jika instruksi user menyebut DUA dimensi berbeda sekaligus "
+            "untuk ditampilkan (mis. \"tampilkan nama produk dan lokasi "
+            "stok\"), kedua dimensi itu harus dipisah ke DUA axis berbeda "
+            "(satu ke row_groupby, satu ke col_groupby) — jangan menaruh "
+            "keduanya di axis yang sama kecuali user secara eksplisit minta "
+            "keduanya jadi satu level breakdown di axis yang sama.\n"
             "   - Untuk field bertipe date/datetime, SELALU tulis dengan "
             "interval eksplisit: \"field:interval\", interval salah satu "
             "dari day/week/month/quarter/year (contoh: "
@@ -364,7 +459,24 @@ class AiPivotAssistant(models.AbstractModel):
             "ini (jika 'tidak diketahui', boleh balas list kosong []).\n"
             "6. Jangan menambahkan field yang tidak relevan dengan "
             "instruksi. Jangan mengarang nama field yang tidak ada di "
-            "daftar field di atas.\n\n"
+            "daftar field di atas.\n"
+            "7. KHUSUS PERMINTAAN STOK 'PER TANGGAL' / 'PER TANGGAL TERTENTU "
+            "DI MASA LALU' (mis. \"stok per 1 Juni 2026\", \"saldo gudang "
+            "tanggal sekian\"): banyak model stok (contoh: stock.quant) "
+            "HANYA merepresentasikan kuantitas REAL-TIME saat ini dan TIDAK "
+            "punya field yang berarti 'kuantitas pada tanggal tertentu di "
+            "masa lalu' — field seperti 'in_date' hanya berarti tanggal "
+            "masuk lot, BUKAN snapshot saldo historis. Jika model saat ini "
+            "tidak punya field yang benar-benar cocok untuk itu di daftar "
+            "field di atas, JANGAN memaksakan filter tanggal pada field yang "
+            "salah makna (mis. 'in_date', 'create_date') karena hasilnya "
+            "akan salah/menyesatkan. Sebaliknya: biarkan domain tanggal "
+            "TIDAK berubah, dan isi \"catatan\" dengan penjelasan bahwa "
+            "model ini hanya menampilkan kuantitas saat ini, bukan snapshot "
+            "historis, dan sarankan user memakai laporan lain (mis. Stock "
+            "Moves / Riwayat Perpindahan Stok, atau Inventory Valuation) "
+            "untuk melihat posisi stok pada tanggal tertentu di masa "
+            "lalu.\n\n"
 
             "=== CONTOH (few-shot, ilustrasi pola jawaban — nama field di "
             "contoh ini hanya ilustrasi, sesuaikan dengan field yang benar-"
@@ -388,7 +500,22 @@ class AiPivotAssistant(models.AbstractModel):
             "-> row_groupby: [\"date_order:month\"]\n\n"
             "Instruksi: \"balik baris dan kolom\" (row_groupby saat ini "
             "[\"date_order:month\"], col_groupby saat ini [\"state\"])\n"
-            "-> row_groupby: [\"state\"], col_groupby: [\"date_order:month\"]\n"
+            "-> row_groupby: [\"state\"], col_groupby: [\"date_order:month\"]\n\n"
+
+            "Instruksi: \"tampilkan nama produk dan lokasi stok, di kolom "
+            "tampilkan nama produk\"\n"
+            "-> col_groupby: [\"product_id\"], row_groupby: [\"location_id\"], "
+            "catatan: \"\" (axis disebutkan eksplisit, tidak perlu asumsi)\n\n"
+
+            "Instruksi: \"buat laporan stok per tanggal 1 Juni 2026\" (model "
+            "saat ini adalah stock.quant, TIDAK ada field snapshot historis "
+            "yang cocok di daftar field)\n"
+            "-> domain: (biarkan seperti domain aktif, jangan tambah filter "
+            "tanggal ke field yang salah makna), catatan: \"Model stok ini "
+            "hanya menampilkan kuantitas real-time saat ini, bukan saldo "
+            "historis per tanggal tertentu. Untuk melihat posisi stok pada "
+            "1 Juni 2026, gunakan laporan Stock Moves/Riwayat Perpindahan "
+            "Stok atau Inventory Valuation.\"\n"
         ) % current_domain_display
 
         user = (
@@ -400,7 +527,13 @@ class AiPivotAssistant(models.AbstractModel):
         )
         return system, user
 
-    def _call_groq(self, api_key, model, base_url, prompt):
+    def _call_llm(self, api_key, model, base_url, prompt):
+        """Panggil endpoint chat completions yang kompatibel dengan format
+        OpenAI (dipakai oleh Groq, OpenCode Zen, dan provider sejenis
+        lainnya). Base URL, model, dan API key ditentukan lewat Settings,
+        sehingga berganti provider cukup dengan mengubah konfigurasi tanpa
+        perlu mengubah kode.
+        """
         system, user = prompt
         url = base_url.rstrip('/') + '/chat/completions'
         headers = {
@@ -416,13 +549,17 @@ class AiPivotAssistant(models.AbstractModel):
             ],
             'response_format': {'type': 'json_object'},
         }
+        # Parameter ini dikenali Groq; provider lain umumnya mengabaikan
+        # field yang tidak mereka kenal, jadi aman dikirim ke semua provider
+        # OpenAI-compatible.
         payload['reasoning_effort'] = 'none'
         payload['reasoning_format'] = 'hidden'
 
         resp = requests.post(url, headers=headers, json=payload, timeout=TIMEOUT)
         if resp.status_code != 200:
             raise UserError(
-                "Groq API error (%s): %s" % (resp.status_code, resp.text[:500])
+                "AI Provider API error (%s) dari %s: %s"
+                % (resp.status_code, url, resp.text[:500])
             )
         data = resp.json()
         try:

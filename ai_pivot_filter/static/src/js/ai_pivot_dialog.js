@@ -114,6 +114,9 @@ export class AiPivotDialog extends Component {
             const newMeasures = result && Array.isArray(result.measures) ? result.measures : null;
             const newRowGroupBy = result && Array.isArray(result.row_groupby) ? result.row_groupby : null;
             const newColGroupBy = result && Array.isArray(result.col_groupby) ? result.col_groupby : null;
+            const aiMessage = result && typeof result.message === "string" && result.message.trim()
+                ? result.message.trim()
+                : null;
 
             const previousController = pivotController;
             const domainChanged = !domainsEqual(newDomain, currentDomain);
@@ -148,6 +151,7 @@ export class AiPivotDialog extends Component {
                     });
                 } else {
                     this.notification.add(
+                        aiMessage ||
                         "Tidak ada perubahan filter, pengelompokan, maupun measure " +
                         "yang terdeteksi dari instruksi tersebut.",
                         { type: "warning" }
@@ -198,7 +202,9 @@ export class AiPivotDialog extends Component {
                     }
                 }
                 this.notification.add(
-                    "Filter, pengelompokan & measure berhasil diperbarui oleh AI.",
+                    aiMessage
+                        ? "Filter, pengelompokan & measure berhasil diperbarui oleh AI. " + aiMessage
+                        : "Filter, pengelompokan & measure berhasil diperbarui oleh AI.",
                     { type: "success" }
                 );
                 this.props.close();
@@ -249,7 +255,9 @@ export class AiPivotDialog extends Component {
             }
 
             this.notification.add(
-                "Filter, pengelompokan & measure berhasil diperbarui oleh AI.",
+                aiMessage
+                    ? "Filter, pengelompokan & measure berhasil diperbarui oleh AI. " + aiMessage
+                    : "Filter, pengelompokan & measure berhasil diperbarui oleh AI.",
                 { type: "success" }
             );
             this.props.close();
