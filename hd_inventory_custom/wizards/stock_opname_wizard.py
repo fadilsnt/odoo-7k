@@ -146,7 +146,7 @@ class StockOpnameWizard(models.TransientModel):
                         """, (self.warehouse_id.id, self.warehouse_id.id, variant.id, start_date, end_date, ))
                         move_ids = self.env['stock.move'].sudo().browse([r[0] for r in self._cr.fetchall()])
                         if move_ids:
-                            diff_notes = move_ids[0].notes
+                            diff_notes = move_ids[0].notes or move_ids[0].reference
                     
                     worksheet1.write(i, 0, product_number if first_variant == 1 else '', content_center_format)
                     worksheet1.merge_range(i, 1, i, 2, variant.display_name, content_left_format)
