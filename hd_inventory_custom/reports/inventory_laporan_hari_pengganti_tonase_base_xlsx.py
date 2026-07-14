@@ -792,7 +792,8 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             uom = o.get("uom_category")
                             is_cl = p.get("is_cl", False)
                             tonase = o.get("tonase", 1)
-                            value = qty if is_cl else qty * tonase
+                            # value = qty if is_cl else qty * tonase
+                            value = qty * tonase
 
                             if uom not in uom_data:
                                 uom_data[uom] = {
