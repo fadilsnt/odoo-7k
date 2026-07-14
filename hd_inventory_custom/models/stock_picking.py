@@ -24,6 +24,7 @@ class StockPicking(models.Model):
     return_picking_ids = fields.One2many('stock.picking', 'origin_picking_id', string="Return Pickings")    
     return_count = fields.Integer(string="Return Count", compute="_compute_return_count")
     origin_picking_id = fields.Many2one('stock.picking', string="Origin Pickings")
+    consume_line_ids = fields.One2many('stock.picking.consume', 'picking_id', string='Consume Lines')
 
     def _compute_return_count(self):
         for rec in self:
@@ -257,43 +258,69 @@ class StockPicking(models.Model):
                             move.product_uom_qty,
                             move.product_uom.name,
                         ))
+            
+            # picking._validate_picking_consume()
 
         # self._compute_btb_number()
         res = super().button_validate()
-
         for picking in self:
-            if self.env['stock.move'].search([
-                ('picking_id', '=', picking.id),
-                ('is_consume', '=', True)
-            ]):
-                continue
+            if picking.picking_type_code != 'incoming':
+                picking._validate_picking_consume()
 
-            consumed_moves = self._validate_consume_products(picking)
+        # for picking in self:
+        #     if self.env['stock.move'].search([
+        #         ('picking_id', '=', picking.id),
+        #         ('is_consume', '=', True)
+        #     ]):
+        #         continue
 
-            if consumed_moves:
-                moves = self.env['stock.move'].create(consumed_moves)
+        #     consumed_moves = self._validate_consume_products(picking)
 
-                moves._action_confirm()
-                moves._action_assign()
+        #     if consumed_moves:
+        #         moves = self.env['stock.move'].create(consumed_moves)
 
-                for move in moves:
-                    if not move.move_line_ids:
-                        self.env['stock.move.line'].create({
-                            'move_id': move.id,
-                            'product_id': move.product_id.id,
-                            'product_uom_id': move.product_uom.id,
-                            'quantity': move.product_uom_qty,
-                            'location_id': move.location_id.id,
-                            'location_dest_id': move.location_dest_id.id,
-                        })
+        #         moves._action_confirm()
+        #         moves._action_assign()
 
-                    else:
-                        for ml in move.move_line_ids:
-                            ml.quantity = move.product_uom_qty
+        #         for move in moves:
+        #             if not move.move_line_ids:
+        #                 self.env['stock.move.line'].create({
+        #                     'move_id': move.id,
+        #                     'product_id': move.product_id.id,
+        #                     'product_uom_id': move.product_uom.id,
+        #                     'quantity': move.product_uom_qty,
+        #                     'location_id': move.location_id.id,
+        #                     'location_dest_id': move.location_dest_id.id,
+        #                 })
 
-                moves._action_done()
+        #             else:
+        #                 for ml in move.move_line_ids:
+        #                     ml.quantity = move.product_uom_qty
+
+        #         moves._action_done()
 
         return res
+    
+    def _validate_picking_consume(self):
+        for picking in self:
+            move_ids = self.env['stock.move']
+            for consume in picking.consume_line_ids:
+                move_ids |= self.env['stock.move'].create({
+                    'name': picking.name + ' - ' + consume.product_id.name,
+                    'product_id': consume.product_id.id,
+                    'product_uom_qty': consume.qty,
+                    'quantity': consume.qty,
+                    'product_uom': consume.product_uom_id.id,
+                    'location_id': picking.location_id.id,
+                    'location_dest_id': picking.location_dest_id.id,
+                    'picking_id': picking.id,
+                    'is_consume': True,
+                })
+            
+            if move_ids:
+                move_ids._action_confirm()
+                move_ids._action_assign()
+                move_ids._action_done()
     
     def _get_bulan_romawi(self, bulan):
         romawi = {
@@ -441,3 +468,14 @@ class StockPicking(models.Model):
                 res['view_id'] = view.id
                 res['arch'] = view.arch_db
         return res
+
+class StockPickingConsume(models.Model):
+    _name = 'stock.picking.consume'
+    _description = 'Stock Picking Consume'
+    
+    picking_id = fields.Many2one("stock.picking", string="Picking", ondelete="cascade")
+    product_id = fields.Many2one("product.product", string="Product", required=True)
+    qty = fields.Float(string="Qty")
+    product_uom_category_id = fields.Many2one('uom.category', related='product_id.uom_id.category_id', store=False, readonly=True)
+    product_uom_id = fields.Many2one('uom.uom', string='Unit of Measure', domain="[('category_id', '=', product_uom_category_id)]", required=True)
+
