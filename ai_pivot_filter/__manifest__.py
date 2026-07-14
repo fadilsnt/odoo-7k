@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'AI Pivot Generator',
-    'version': '1.0',
+    'version': '1.1',
     'category': 'Tools',
     'summary': 'Update filter/domain pada Pivot View menggunakan chatbox AI',
     'description': """
