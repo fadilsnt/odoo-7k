@@ -54,6 +54,8 @@ def _get_oven_key(oven, prod_date):
 
     return oven
 
+ALLOWED_PRODUCT_CATEGORIES = ['EXPORT', 'LOKAL', 'FUEL']
+
 class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
     _name = 'report.hd_inventory_custom.inventory_laporan_hari_pengganti_ton'
     _inherit = 'report.report_xlsx.abstract'
@@ -62,7 +64,10 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
     def _get_data_xlsx_report(self, report_date, warehouse_id=None):
         warehouse_filter = ""
-        params = {'report_date': report_date}
+        params = {
+            'report_date': report_date,
+            'allowed_categories': ALLOWED_PRODUCT_CATEGORIES,
+        }
         
         if warehouse_id:
             warehouse_filter = "AND sw.id = %(warehouse_id)s"
@@ -153,6 +158,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 LEFT JOIN product_template_attribute_value ptav ON ptav.id = pvc.product_template_attribute_value_id
                 LEFT JOIN product_attribute pa ON pa.id = ptav.attribute_id
                 LEFT JOIN product_attribute_value pav ON pav.id = ptav.product_attribute_value_id
+                WHERE pc.name = ANY(%(allowed_categories)s)
                 GROUP BY
                     bm.warehouse,
                     bm.oven,
@@ -791,8 +797,9 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             qty = p.get("qty", 0)
                             uom = o.get("uom_category")
                             is_cl = p.get("is_cl", False)
-                            tonase = o.get("tonase", 1)
-                            value = qty if is_cl else qty * tonase
+                            tonase = p.get("tonase", 1)
+                            # value = qty if is_cl else qty * tonase
+                            value = qty * tonase
 
                             if uom not in uom_data:
                                 uom_data[uom] = {

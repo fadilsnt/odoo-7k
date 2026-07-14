@@ -88,7 +88,7 @@ class ReportStockWarehouse(models.AbstractModel):
                         continue
 
                     salesperson = partner.name
-                    customer = partner.name
+                    customer = ml.product_id.sales_person_ids[0].name if ml.product_id.sales_person_ids else 'None'
                     partner_ids = (partner.id,)
 
                     prod = ml.product_id.display_name

@@ -54,6 +54,8 @@ def _get_oven_key(oven, prod_date):
 
     return oven
 
+ALLOWED_PRODUCT_CATEGORIES = ['EXPORT', 'LOKAL', 'FUEL']
+
 class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
     _name = 'report.hd_inventory_custom.hari_pengganti_xlsx'
     _inherit = 'report.report_xlsx.abstract'
@@ -62,7 +64,10 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
     def _get_data_xlsx_report(self, report_date, warehouse_id=None):
         warehouse_filter = ""
-        params = {'report_date': report_date}
+        params = {
+            'report_date': report_date,
+            'allowed_categories': ALLOWED_PRODUCT_CATEGORIES,
+        }
         
         if warehouse_id:
             warehouse_filter = "AND sw.id = %(warehouse_id)s"
@@ -151,6 +156,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 LEFT JOIN product_template_attribute_value ptav ON ptav.id = pvc.product_template_attribute_value_id
                 LEFT JOIN product_attribute pa ON pa.id = ptav.attribute_id
                 LEFT JOIN product_attribute_value pav ON pav.id = ptav.product_attribute_value_id
+                WHERE pc.name = ANY(%(allowed_categories)s)
                 GROUP BY
                     bm.warehouse,
                     bm.oven,
