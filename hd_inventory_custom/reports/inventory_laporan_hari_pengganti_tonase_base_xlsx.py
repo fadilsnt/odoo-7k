@@ -791,7 +791,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             qty = p.get("qty", 0)
                             uom = o.get("uom_category")
                             is_cl = p.get("is_cl", False)
-                            tonase = o.get("tonase", 1)
+                            tonase = p.get("tonase", 1)
                             # value = qty if is_cl else qty * tonase
                             value = qty * tonase
 
