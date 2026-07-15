@@ -990,7 +990,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     sum_ending += ending_qty
 
                 sheet.merge_range(sum_row, 9, sum_row + (total_row - 1 if total_row > 0 else 0), 10, sum_ending, fmt_num_bold)
-                bp_row += 1
 
             # ================= PRODUCT EXPORT =================
             elf_row = footer_row + 2
