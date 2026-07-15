@@ -1,8 +1,11 @@
 from odoo import models
-from datetime import datetime, date, timedelta
+from datetime import datetime, time, date, timedelta
+from itertools import groupby
+from collections import defaultdict
 import re
 import json
 import logging
+import pytz
 
 _logger = logging.getLogger(__name__)
 
@@ -446,6 +449,15 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
         data_report = self._get_data_xlsx_report(report_date, warehouse.id if warehouse else None)
         repack_data = self._get_repack_data(report_date, warehouse.id if warehouse else None)
 
+        tz = pytz.timezone("Asia/Jakarta")
+        date_local = datetime.strptime(report_date, "%Y-%m-%d")
+        before_local = tz.localize(datetime.combine(date_local - timedelta(days=1), time.max))
+        current_min_local = tz.localize(datetime.combine(date_local, time.min))
+        current_max_local = tz.localize(datetime.combine(date_local, time.max))
+        before_date = before_local.astimezone(pytz.UTC).replace(tzinfo=None)
+        current_min_date = current_min_local.astimezone(pytz.UTC).replace(tzinfo=None)
+        current_max_date = current_max_local.astimezone(pytz.UTC).replace(tzinfo=None)
+
         _logger.info("Repack Data %s", repack_data)
 
         # =========================================================
@@ -457,7 +469,10 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             fmt_label = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
             fmt_header_packing = workbook.add_format({'border': 1, 'bold': True, 'align': 'left', 'valign': 'vcenter'})
             fmt_number = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter'})
+            fmt_text_left = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter'})
             fmt_text_center = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter'})
+            fmt_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
+            fmt_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
             fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'bold': True})
@@ -731,6 +746,10 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             sheet.write(row, 0, "TOTAL QTY (KG)", fmt_header)
             col = 1
 
+            if not oven_list:
+                grade_col_start = last_col + 1
+                grade_row = grade_start_row
+
             for oven in oven_list:
                 total = 0.0
 
@@ -912,7 +931,243 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 footer_row += 1
 
                 sheet.merge_range(footer_row, 0, footer_row, last_col, menjadi)
-                footer_row += 1    
+                footer_row += 1
+            
+            bp_row = footer_row + 2
+            # ================= BAHAN PACKING =================
+            sheet.merge_range(bp_row, 0, bp_row, 10, "BAHAN PACKING", fmt_label)
+            bp_row += 1
+            sheet.write(bp_row, 0, "BARANG", fmt_header)
+            sheet.merge_range(bp_row, 1, bp_row, 2, "AWAL", fmt_header)
+            sheet.merge_range(bp_row, 3, bp_row, 4, "TERIMA", fmt_header)
+            sheet.merge_range(bp_row, 5, bp_row, 6, "KELUAR", fmt_header)
+            sheet.merge_range(bp_row, 7, bp_row, 8, "SISA", fmt_header)
+            sheet.merge_range(bp_row, 9, bp_row, 10, "TOTAL", fmt_header)
+            bp_row += 1
+
+            self._cr.execute(
+                """
+                    SELECT pp.id
+                    FROM product_product pp
+                        JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                        JOIN product_category pc ON pt.categ_id = pc.id
+                        JOIN uom_uom uom ON uom.id = pt.uom_id
+                    WHERE pt.type = 'consu' AND pc.name IN ('BAHAN PENOLONG','BAHAN PACKING') AND pp.active = true
+                    ORDER BY uom.name asc, pt.name asc
+                """)
+            variant_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
+
+            for uom, variants_group in groupby(variant_ids, key=lambda v: v.uom_id):
+                sum_row = bp_row
+                total_row = 0
+                sum_ending = 0.0
+                for variant in variants_group:
+                    beginning_qty = variant.with_context(warehouse_id=warehouse_id, to_date=before_date).qty_available
+
+                    self._cr.execute(
+                        """
+                            SELECT sml.id FROM stock_move_line sml
+                                JOIN stock_location src ON src.id = sml.location_id
+                                JOIN stock_location dst ON dst.id = sml.location_dest_id
+                            WHERE (src.warehouse_id=%s OR dst.warehouse_id=%s) AND
+                                sml.product_id = %s AND sml.date BETWEEN %s AND %s AND sml.state='done'
+                            ORDER BY sml.date asc, sml.id
+                        """, (warehouse_id, warehouse_id, variant.id, current_min_date, current_max_date, ))
+                    move_ids = self.env['stock.move.line'].browse([r[0] for r in self._cr.fetchall()])
+
+                    qty_in = sum(move.quantity for move in move_ids.filtered(lambda m: m.location_dest_id.warehouse_id.id == warehouse_id)) or 0.0
+                    qty_out = sum(move.quantity for move in move_ids.filtered(lambda m: m.location_id.warehouse_id.id == warehouse_id)) or 0.0
+                    ending_qty = beginning_qty + qty_in - qty_out
+
+                    sheet.write(bp_row, 0, variant.name, fmt_text_left)
+                    sheet.merge_range(bp_row, 1, bp_row, 2, beginning_qty if beginning_qty else "-", fmt_num)
+                    sheet.merge_range(bp_row, 3, bp_row, 4, qty_in if qty_in else "", fmt_num)
+                    sheet.merge_range(bp_row, 5, bp_row, 6, qty_out if qty_out else "", fmt_num)
+                    sheet.merge_range(bp_row, 7, bp_row, 8, ending_qty if ending_qty else "-", fmt_num)
+
+                    bp_row += 1
+                    total_row += 1
+                    sum_ending += ending_qty
+
+                sheet.merge_range(sum_row, 9, sum_row + (total_row - 1 if total_row > 0 else 0), 10, sum_ending, fmt_num_bold)
+                bp_row += 1
+
+            # ================= PRODUCT EXPORT =================
+            elf_row = footer_row + 2
+            elf_col = 12
+
+            self._cr.execute(
+                """
+                    SELECT pp.id
+                    FROM product_product pp
+                        JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                        JOIN product_category pc ON pt.categ_id = pc.id
+                    WHERE pt.type = 'consu' AND pc.name IN ('EXPORT') AND pp.active = true
+                    ORDER BY pt.name asc
+                """)
+            export_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
+            
+            def get_attr_ptav(variant, attr_name):
+                for ptav in variant.product_template_attribute_value_ids:
+                    if ptav.attribute_id.name.lower() == attr_name.lower():
+                        return ptav
+                return self.env['product.template.attribute.value']
+
+            export_data = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+            cont_value_map = defaultdict(dict)
+            grade_set_per_box = defaultdict(set)
+            box_weight_map = {}
+
+            for variant in export_ids:
+                box_ptav = get_attr_ptav(variant, 'BOX')
+                grade_ptav = get_attr_ptav(variant, 'Grade')
+                cont_ptav = get_attr_ptav(variant, 'CONT')
+
+                box = box_ptav.name or 'TANPA BOX'
+                grade = grade_ptav.name or 'NONE'
+                cont = cont_ptav.name
+                desain = variant.product_tmpl_id.name
+
+                if box not in box_weight_map:
+                    box_weight_map[box] = box_ptav.product_attribute_value_id.weight_per_product_attribute or 0.0
+
+                stock_qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).qty_available
+                export_data[box][desain][grade] += stock_qty
+                grade_set_per_box[box].add(grade)
+
+                if cont:
+                    try:
+                        cont_value_map[box][desain] = float(cont)
+                    except ValueError:
+                        cont_value_map[box][desain] = 0.0
+
+            sorted_boxes = sorted(export_data.keys(), key=lambda b: box_weight_map.get(b, 0.0))
+            for box in sorted_boxes:
+                desain_dict = export_data[box]
+                grades = sorted(grade_set_per_box[box])  # urutan kolom grade
+
+                sheet.merge_range(elf_row, elf_col, elf_row, elf_col + len(grades) + 2, box, fmt_header)
+                elf_row += 1
+
+                sheet.write(elf_row, elf_col, "DESAIN", fmt_header)
+                for i, grade in enumerate(grades):
+                    sheet.write(elf_row, elf_col + i + 1, grade, fmt_header)
+                sheet.write(elf_row, elf_col + len(grades) + 1, "TOTAL", fmt_header)
+                sheet.write(elf_row, elf_col + len(grades) + 2, "CONT", fmt_header)
+                elf_row += 1
+
+                total_per_grade = defaultdict(float)
+                grand_total_export = 0.0
+                cont_total_export = 0.0
+
+                for desain, grade_qty in desain_dict.items():
+                    sheet.write(elf_row, elf_col, desain, fmt_text_left)
+                    row_total = 0.0
+                    for i, grade in enumerate(grades):
+                        qty = grade_qty.get(grade, 0.0)
+                        sheet.write(elf_row, elf_col + i + 1, qty, fmt_num)
+                        total_per_grade[grade] += qty
+                        row_total += qty
+
+                    cont_value = cont_value_map.get(box, {}).get(desain, 0.0)
+                    cont_result = (row_total / cont_value) if cont_value else 0.0
+
+                    sheet.write(elf_row, elf_col + len(grades) + 1, row_total, fmt_num)
+                    sheet.write(elf_row, elf_col + len(grades) + 2, cont_result, fmt_num)
+
+                    grand_total_export += row_total
+                    cont_total_export += cont_result
+                    elf_row += 1
+
+                sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
+                for i, grade in enumerate(grades):
+                    sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade], fmt_num_bold)
+
+                sheet.write(elf_row, elf_col + len(grades) + 1, grand_total_export, fmt_num_bold)
+                sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export, fmt_num_bold)
+                elf_row += 2
+
+            # ================= PRODUCT LOKAL =================
+            sheet.merge_range(elf_row, 12, elf_row, 15, "LOKAL", fmt_label)
+            elf_row += 1
+            sheet.write(elf_row, 12, "DESAIN", fmt_header)
+            sheet.write(elf_row, 13, "BERAT", fmt_header)
+            sheet.write(elf_row, 14, "QTY", fmt_header)
+            sheet.write(elf_row, 15, "TOTAL", fmt_header)
+            elf_row += 1
+            
+            qty_total_local = 0.0
+            grand_total_local = 0.0
+
+            self._cr.execute(
+                """
+                    SELECT pp.id
+                    FROM product_product pp
+                        JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                        JOIN product_category pc ON pt.categ_id = pc.id
+                    WHERE pt.type = 'consu' AND pc.name IN ('LOKAL') AND pp.active = true
+                    ORDER BY pt.name asc
+                """)
+            local_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
+            for local in local_ids:
+                weight_local = local.product_tmpl_id.weight or 0.0
+                qty_local = local.with_context(warehouse_id=warehouse_id, to_date=current_max_date).qty_available
+                total_local = qty_local * weight_local
+
+                sheet.write(elf_row, 12, local.name, fmt_text_left)
+                sheet.write(elf_row, 13, weight_local, fmt_num)
+                sheet.write(elf_row, 14, qty_local, fmt_num)
+                sheet.write(elf_row, 15, total_local, fmt_num)
+
+                qty_total_local += qty_local
+                grand_total_local += total_local
+                elf_row += 1
+            
+            sheet.merge_range(elf_row, 12, elf_row, 13, "TOTAL", fmt_header)
+            sheet.write(elf_row, 14, qty_total_local, fmt_num_bold)
+            sheet.write(elf_row, 15, grand_total_local, fmt_num_bold)
+            elf_row += 2
+
+            # ================= PRODUCT FUEL =================
+            sheet.merge_range(elf_row, 12, elf_row, 15, "FUEL", fmt_label)
+            elf_row += 1
+            sheet.write(elf_row, 12, "DESAIN", fmt_header)
+            sheet.write(elf_row, 13, "BERAT", fmt_header)
+            sheet.write(elf_row, 14, "QTY", fmt_header)
+            sheet.write(elf_row, 15, "TOTAL", fmt_header)
+            elf_row += 1
+            
+            qty_total_fuel = 0.0
+            grand_total_fuel = 0.0
+
+            self._cr.execute(
+                """
+                    SELECT pp.id
+                    FROM product_product pp
+                        JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                        JOIN product_category pc ON pt.categ_id = pc.id
+                    WHERE pt.type = 'consu' AND pc.name IN ('FUEL') AND pp.active = true
+                    ORDER BY pt.name asc
+                """)
+            fuel_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
+            for fuel in fuel_ids:
+                weight_fuel = fuel.product_tmpl_id.weight or 0.0
+                qty_fuel = fuel.with_context(warehouse_id=warehouse_id, to_date=current_max_date).qty_available
+                total_fuel = qty_fuel * weight_fuel
+
+                sheet.write(elf_row, 12, fuel.name, fmt_text_left)
+                sheet.write(elf_row, 13, weight_fuel, fmt_num)
+                sheet.write(elf_row, 14, qty_fuel, fmt_num)
+                sheet.write(elf_row, 15, total_fuel, fmt_num)
+
+                qty_total_fuel += qty_fuel
+                grand_total_fuel += total_fuel
+                elf_row += 1
+            
+            sheet.merge_range(elf_row, 12, elf_row, 13, "TOTAL", fmt_header)
+            sheet.write(elf_row, 14, qty_total_fuel, fmt_num_bold)
+            sheet.write(elf_row, 15, grand_total_fuel, fmt_num_bold)
+            elf_row += 2
 
         # =========================================================
         # CASE 1 : SINGLE WAREHOUSE
