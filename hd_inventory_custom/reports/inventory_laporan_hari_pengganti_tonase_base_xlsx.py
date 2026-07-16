@@ -987,15 +987,15 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     if beginning_qty or ending_qty:
                         sheet.write(bp_row, 0, variant.name, fmt_text_left)
                         sheet.merge_range(bp_row, 1, bp_row, 2, beginning_qty if beginning_qty else "-", fmt_num)
-                        sheet.merge_range(bp_row, 3, bp_row, 4, qty_in if qty_in else "", fmt_num)
-                        sheet.merge_range(bp_row, 5, bp_row, 6, qty_out if qty_out else "", fmt_num)
+                        sheet.merge_range(bp_row, 3, bp_row, 4, qty_in if qty_in else "-", fmt_num)
+                        sheet.merge_range(bp_row, 5, bp_row, 6, qty_out if qty_out else "-", fmt_num)
                         sheet.merge_range(bp_row, 7, bp_row, 8, ending_qty if ending_qty else "-", fmt_num)
 
                         bp_row += 1
                         total_row += 1
                         sum_ending += ending_qty
 
-                sheet.merge_range(sum_row, 9, sum_row + (total_row - 1 if total_row > 0 else 0), 10, sum_ending, fmt_num_bold)
+                sheet.merge_range(sum_row, 9, sum_row + (total_row - 1 if total_row > 0 else 0), 10, sum_ending if sum_ending else "-", fmt_num_bold)
 
             # ================= PRODUCT EXPORT =================
             elf_row = footer_row + 2
@@ -1081,14 +1081,14 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                         sheet.write(elf_row, elf_col, desain, fmt_text_left)
                         for i, grade in enumerate(grades):
                             qty = grade_qty.get(grade, 0.0)
-                            sheet.write(elf_row, elf_col + i + 1, qty, fmt_num)
+                            sheet.write(elf_row, elf_col + i + 1, qty if qty else "-", fmt_num)
                             total_per_grade[grade] += qty
 
                         cont_value = cont_value_map.get(box, {}).get(desain, 0.0)
                         cont_result = (row_total / cont_value) if cont_value else 0.0
 
-                        sheet.write(elf_row, elf_col + len(grades) + 1, row_total, fmt_num)
-                        sheet.write(elf_row, elf_col + len(grades) + 2, cont_result, fmt_num)
+                        sheet.write(elf_row, elf_col + len(grades) + 1, row_total if row_total else "-", fmt_num)
+                        sheet.write(elf_row, elf_col + len(grades) + 2, cont_result if cont_result else "-", fmt_num)
 
                         grand_total_export += row_total
                         cont_total_export += cont_result
@@ -1096,10 +1096,10 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                 sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
                 for i, grade in enumerate(grades):
-                    sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade], fmt_num_bold)
+                    sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade] if total_per_grade[grade] else "-", fmt_num_bold)
 
-                sheet.write(elf_row, elf_col + len(grades) + 1, grand_total_export, fmt_num_bold)
-                sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export, fmt_num_bold)
+                sheet.write(elf_row, elf_col + len(grades) + 1, grand_total_export if grand_total_export else "-", fmt_num_bold)
+                sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export if cont_total_export else "-", fmt_num_bold)
                 elf_row += 2
 
             # ================= PRODUCT LOKAL =================
@@ -1136,17 +1136,17 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                     if (qty_local + forecast_local) > 0:
                         sheet.write(elf_row, 12, local.name, fmt_text_left)
-                        sheet.write(elf_row, 13, weight_local, fmt_num)
-                        sheet.write(elf_row, 14, qty_local + forecast_local, fmt_num)
-                        sheet.write(elf_row, 15, total_local, fmt_num)
+                        sheet.write(elf_row, 13, weight_local if weight_local else "-", fmt_num)
+                        sheet.write(elf_row, 14, qty_local + forecast_local if (qty_local + forecast_local) else "-", fmt_num)
+                        sheet.write(elf_row, 15, total_local if total_local else "-", fmt_num)
 
                         qty_total_local += (qty_local + forecast_local)
                         grand_total_local += total_local
                         elf_row += 1
                 
                 sheet.merge_range(elf_row, 12, elf_row, 13, "TOTAL", fmt_header)
-                sheet.write(elf_row, 14, qty_total_local, fmt_num_bold)
-                sheet.write(elf_row, 15, grand_total_local, fmt_num_bold)
+                sheet.write(elf_row, 14, qty_total_local if qty_total_local else "-", fmt_num_bold)
+                sheet.write(elf_row, 15, grand_total_local if grand_total_local else "-", fmt_num_bold)
                 elf_row += 2
 
             # ================= PRODUCT FUEL =================
@@ -1183,17 +1183,17 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                     if (qty_fuel + forecast_fuel) > 0:
                         sheet.write(elf_row, 12, fuel.name, fmt_text_left)
-                        sheet.write(elf_row, 13, weight_fuel, fmt_num)
-                        sheet.write(elf_row, 14, qty_fuel + forecast_fuel, fmt_num)
-                        sheet.write(elf_row, 15, total_fuel, fmt_num)
+                        sheet.write(elf_row, 13, weight_fuel if weight_fuel else "-", fmt_num)
+                        sheet.write(elf_row, 14, qty_fuel + forecast_fuel if (qty_fuel + forecast_fuel) else "-", fmt_num)
+                        sheet.write(elf_row, 15, total_fuel if total_fuel else "-", fmt_num)
 
                         qty_total_fuel += (qty_fuel + forecast_fuel)
                         grand_total_fuel += total_fuel
                         elf_row += 1
                 
                 sheet.merge_range(elf_row, 12, elf_row, 13, "TOTAL", fmt_header)
-                sheet.write(elf_row, 14, qty_total_fuel, fmt_num_bold)
-                sheet.write(elf_row, 15, grand_total_fuel, fmt_num_bold)
+                sheet.write(elf_row, 14, qty_total_fuel if qty_total_fuel else "-", fmt_num_bold)
+                sheet.write(elf_row, 15, grand_total_fuel if grand_total_fuel else "-", fmt_num_bold)
                 elf_row += 2
 
         # =========================================================
