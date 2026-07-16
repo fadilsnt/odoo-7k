@@ -157,6 +157,53 @@ class ReportStockWarehouse(models.AbstractModel):
                             product_group_totals[cust][base_name]["total"]["box"] += vals.get("box", 0)
                             product_group_totals[cust][base_name]["total"]["cont"] += vals.get("cont", 0)
 
+            # =====================================================================
+            # BARU: Grouping produk per customer berdasarkan NAMA PRODUK ASLI
+            # (product.name), bukan berdasarkan string display_name.
+            #
+            # Ini dipakai di template supaya baris "TOTAL <nama produk>" hanya
+            # dicetak SEKALI di akhir grup (menggabungkan semua grade/varian),
+            # bukan setelah setiap baris grade seperti bug sebelumnya (kasus
+            # FIREBRAND 10 KG dan FIREHEX 10 KG yang tiap grade dapat TOTAL
+            # sendiri-sendiri).
+            #
+            # Struktur:
+            # customer_product_groups[salesperson][customer] = [
+            #     {"base_name": "FIREBRAND 10 KG", "prods": ["FIREBRAND 10 KG (A)", "FIREBRAND 10 KG (AB)", ...]},
+            #     ...
+            # ]
+            # =====================================================================
+            products_sorted = sorted(list(products))
+            customer_product_groups = defaultdict(dict)
+            for sp, custs in results.items():
+                for cust_name, prod_data in custs.items():
+                    # urutan sama seperti sebelumnya (mengikuti urutan alfabetis global)
+                    prods_in_cust = [p for p in products_sorted if p in prod_data]
+
+                    groups = {}
+                    order = []
+                    for prod in prods_in_cust:
+                        # ambil nama produk ASLI (product.name) dari data yang tersimpan,
+                        # bukan hasil split string display_name yang rawan salah.
+                        name_product = None
+                        for wh_name, vals in prod_data[prod].items():
+                            if vals.get('name_product'):
+                                name_product = vals['name_product']
+                                break
+                        if not name_product:
+                            # fallback jika name_product tidak tersimpan
+                            name_product = prod.split('(')[0].strip()
+
+                        if name_product not in groups:
+                            groups[name_product] = []
+                            order.append(name_product)
+                        groups[name_product].append(prod)
+
+                    customer_product_groups[sp][cust_name] = [
+                        {"base_name": base_name, "prods": groups[base_name]}
+                        for base_name in order
+                    ]
+
             uoms = self.env['uom.uom'].search([('category_id.name', '=', 'BOX')], order="factor ASC")
             warehouse_uom_totals = defaultdict(lambda: defaultdict(float))
             grand_uom_totals = defaultdict(float)
@@ -299,6 +346,7 @@ class ReportStockWarehouse(models.AbstractModel):
                 "grand_uom_totals": grand_uom_totals,
                 "grand_uom_totals_count" : grand_uom_totals_count,
                 "product_group_totals": product_group_totals,
+                "customer_product_groups": customer_product_groups,
                 "uoms_new": uoms_used_new,
                 "total_warehouse_summary_new": total_warehouse_summary_new,
                 "salesperson_totals": salesperson_totals,
@@ -597,4 +645,3 @@ class ReportStockWarehouse(models.AbstractModel):
                 if match:
                     return float(match.group(1))
         return 0.0
-

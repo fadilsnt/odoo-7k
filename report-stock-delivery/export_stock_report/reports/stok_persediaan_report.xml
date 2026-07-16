@@ -199,31 +199,29 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <t t-set="products_in_cust" t-value="[p for p in products if p in prod_data]"/>
-                            <!-- Inisialisasi -->
-                            <t t-set="prev_base" t-value="''"/>
-                            <t t-set="subtotal_box" t-value="0"/>
-                            <t t-set="subtotal_cont" t-value="0"/>
-                            <t t-set="wh_totals" t-value="dict((wh, {'box': 0, 'cont': 0}) for wh in warehouses)"/>
+                            <t t-set="groups" t-value="customer_product_groups.get(salesperson, {}).get(cust_name, [])"/>
 
-                            <!-- Loop produk -->
-                            <t t-foreach="products_in_cust" t-as="prod">
-                                <t t-set="base_name" t-value="prod.split('(')[0].strip()"/>
-                                <t t-set="total_box" t-value="0"/>
-                                <t t-set="total_cont" t-value="0"/>
-                                <t t-set="grade" t-value="None"/>
-                                <t t-set="name_product" t-value="None"/>
+                            <t t-foreach="groups" t-as="grp">
+                                <t t-set="base_name" t-value="grp['base_name']"/>
+                                <t t-set="prods" t-value="grp['prods']"/>
 
-                                <!-- ambil info produk -->
-                                <t t-foreach="warehouses" t-as="wh" t-if="prod_data.get(prod, {}).get(wh)">
-                                    <t t-set="grade" t-value="prod_data[prod][wh].get('grade')"/>
-                                    <t t-set="name_product" t-value="prod_data[prod][wh].get('name_product')"/>
-                                    <t t-break="True"/>
-                                </t>
+                                <t t-set="subtotal_box" t-value="0"/>
+                                <t t-set="subtotal_cont" t-value="0"/>
+                                <t t-set="wh_totals" t-value="dict((wh, {'box': 0, 'cont': 0}) for wh in warehouses)"/>
 
-                                <t t-if="name_product">
+                                <!-- Loop tiap varian/grade dalam grup produk yang sama -->
+                                <t t-foreach="prods" t-as="prod">
+                                    <t t-set="grade" t-value="None"/>
+                                    <t t-foreach="warehouses" t-as="wh" t-if="prod_data.get(prod, {}).get(wh)">
+                                        <t t-set="grade" t-value="prod_data[prod][wh].get('grade')"/>
+                                        <t t-break="True"/>
+                                    </t>
+
+                                    <t t-set="total_box" t-value="0"/>
+                                    <t t-set="total_cont" t-value="0"/>
+
                                     <tr>
-                                        <td style="text-align:left; padding-left:6px;"><t t-esc="name_product"/></td>
+                                        <td style="text-align:left; padding-left:6px;"><t t-esc="base_name"/></td>
                                         <td><t t-esc="grade or '-'"/></td>
 
                                         <!-- isi per warehouse -->
@@ -254,49 +252,37 @@
                                         <td style="text-align:center;">
                                             <t t-esc="total_cont and ('{:,.2f}'.format(total_cont).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
                                         </td>
-
-                                        <!-- total produk -->
-                                        <t t-set="subtotal_box" t-value="subtotal_box + total_box"/>
-                                        <t t-set="subtotal_cont" t-value="subtotal_cont + total_cont"/>
                                     </tr>
 
+                                    <!-- akumulasi ke subtotal grup -->
+                                    <t t-set="subtotal_box" t-value="subtotal_box + total_box"/>
+                                    <t t-set="subtotal_cont" t-value="subtotal_cont + total_cont"/>
                                 </t>
 
-                                <!-- Cek akhir grup produk -->
-                                <t t-set="is_last_of_group"
-                                t-value="(products_in_cust.index(prod) == len(products_in_cust) - 1) or (products_in_cust[products_in_cust.index(prod) + 1].split('(')[0].strip() != name_product)"/>
+                                <!-- TOTAL per produk: SEKALI SAJA, menggabungkan semua grade/varian dalam grup -->
+                                <tr style="font-weight:bold; background-color:#f0f0f0;">
+                                    <td colspan="2" style="text-align:left; padding-left:6px;">
+                                        TOTAL <t t-esc="base_name"/>
+                                    </td>
 
-                                <t t-if="is_last_of_group">
-                                    <tr style="font-weight:bold; background-color:#f0f0f0;">
-                                        <td colspan="2" style="text-align:left; padding-left:6px;">
-                                            TOTAL <t t-esc="name_product"/>
-                                        </td>
-
-                                        <!-- total per warehouse -->
-                                        <t t-foreach="warehouses" t-as="wh">
-                                            <td style="text-align:center;">
-                                                <t t-esc="wh_totals[wh]['box'] and ('{:,.0f}'.format(wh_totals[wh]['box']).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
-                                            </td>
-                                            <td style="text-align:center;">
-                                                <t t-esc="wh_totals[wh]['cont'] and ('{:,.2f}'.format(wh_totals[wh]['cont']).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
-                                            </td>
-                                        </t>
-
-                                        <!-- total keseluruhan -->
+                                    <!-- total per warehouse -->
+                                    <t t-foreach="warehouses" t-as="wh">
                                         <td style="text-align:center;">
-                                            <t t-esc="subtotal_box and ('{:,.0f}'.format(subtotal_box).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
+                                            <t t-esc="wh_totals[wh]['box'] and ('{:,.0f}'.format(wh_totals[wh]['box']).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
                                         </td>
                                         <td style="text-align:center;">
-                                            <t t-esc="subtotal_cont and ('{:,.2f}'.format(subtotal_cont).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
+                                            <t t-esc="wh_totals[wh]['cont'] and ('{:,.2f}'.format(wh_totals[wh]['cont']).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
                                         </td>
-                                    </tr>
+                                    </t>
 
-                                    <!-- reset subtotal -->
-                                    <t t-set="subtotal_box" t-value="0"/>
-                                    <t t-set="subtotal_cont" t-value="0"/>
-                                    <t t-set="wh_totals" t-value="dict((wh, {'box': 0, 'cont': 0}) for wh in warehouses)"/>
-                                </t>
-                                <t t-set="prev_base" t-value="base_name"/>
+                                    <!-- total keseluruhan -->
+                                    <td style="text-align:center;">
+                                        <t t-esc="subtotal_box and ('{:,.0f}'.format(subtotal_box).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <t t-esc="subtotal_cont and ('{:,.2f}'.format(subtotal_cont).replace(',', 'X').replace('.', ',').replace('X', '.')) or '-'"/>
+                                    </td>
+                                </tr>
                             </t>
                         </tbody>
                     </table>
