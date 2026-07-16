@@ -30,9 +30,6 @@
     <field name="model">stock.move.line</field>
     <field name="inherit_id" ref="stock.view_move_line_tree"/>
     <field name="arch" type="xml">
-        <xpath expr="//field[@name='reference']" position="after">
-            <field name="notes" string="Keterangan" />
-        </xpath>
         <xpath expr="//field[@name='quantity']" position="after">
             <field name="tonase_asli" string="Tonase Asli"
                 decoration-danger="(location_usage in ('internal','transit')) and (location_dest_usage not in ('internal','transit'))"
@@ -40,16 +37,4 @@
         </xpath>
     </field>
   </record>
-
-  <record id="stock_move_line_view_form_hd_inventory_custom_inherit" model="ir.ui.view">
-    <field name="name">stock.move.line.view.form.hd.inventory.custom.inherit</field>
-    <field name="model">stock.move.line</field>
-    <field name="inherit_id" ref="stock.view_move_line_form"/>
-    <field name="arch" type="xml">
-        <xpath expr="//field[@name='reference']" position="after">
-            <field name="notes" string="Keterangan" />
-        </xpath>
-    </field>
-  </record>
-
 </odoo>

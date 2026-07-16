@@ -1,2 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_ai_pivot_assistant_user,ai.pivot.assistant.user,model_ai_pivot_assistant,base.group_user,1,0,0,0

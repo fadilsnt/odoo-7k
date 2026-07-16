@@ -15,11 +15,6 @@ class StockMove(models.Model):
     tonase_asli_demand = fields.Float(string="Tonase Asli Demand")
     is_tonase_move_line = fields.Boolean(string="is Tonase Move Line?", compute="_compute_is_tonase_move_line", default=False)
 
-    # =========================================================
-    # PHYSICAL INVENTORY
-    # =========================================================
-    notes = fields.Text(string="Keterangan")
-
     @api.depends('move_line_ids')
     def _compute_is_tonase_move_line(self):
         for rec in self:

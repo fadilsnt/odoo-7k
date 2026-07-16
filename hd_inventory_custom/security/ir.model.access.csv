@@ -6,4 +6,3 @@ access_stock_move_line_view_only,stock.move.line.view.only,stock.model_stock_mov
 access_wizard_buat_laporan_harian_picking_user,hd_inventory_custom.wizard.buat.laporan.harian.picking,model_wizard_buat_laporan_harian_picking,base.group_user,1,1,1,1
 access_wizard_buat_laporan_harian_picking_line_user,hd_inventory_custom.wizard.buat.laporan.harian.picking.line,model_wizard_buat_laporan_harian_picking_line,base.group_user,1,1,1,1
 access_wizard_laporan_sparepart_bulanan_user,hd_inventory_custom.wizard.laporan.sparepart.bulanan,model_wizard_laporan_sparepart_bulanan,base.group_user,1,1,1,1
-access_stock_opname_wizard_user,hd_inventory_custom.stock.opname.wizard,model_stock_opname_wizard,base.group_user,1,1,1,1
