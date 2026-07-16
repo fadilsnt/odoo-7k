@@ -54,11 +54,10 @@ def _get_oven_key(oven, prod_date):
 
     return oven
 
-class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
-    _name = 'report.hd_inventory_custom.hari_pengganti_xlsx'
+class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
+    _name = 'report.hd_inventory_custom.inventory_laporan_hari_pengganti_ton'
     _inherit = 'report.report_xlsx.abstract'
-    _description = 'Laporan Inventory Hari Pengganti XLSX'
-    _auto = False 
+
 
     def _get_data_xlsx_report(self, report_date, warehouse_id=None):
         warehouse_filter = ""
@@ -84,7 +83,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     sml.bongkaran AS bongkaran,
                     sml.asumsi_berat_ikat AS asumsi_berat_ikat,
                     sml.product_id,
-                    SUM(sml.quantity) AS qty,
+                    SUM(sml.tonase_asli) AS tonase,
                     sml.product_uom_id
                 FROM stock_move_line sml
                 JOIN stock_move sm ON sml.move_id = sm.id
@@ -96,7 +95,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 WHERE sp.scheduled_date::date = %(report_date)s
                 AND sp.state IN ('confirmed', 'assigned', 'done')
                 {warehouse_filter}
-                GROUP BY 
+                GROUP BY
                     sw.name,
                     sml.oven_number,
                     sml.production_date,
@@ -126,22 +125,19 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     bm.pembakar_penutup,
                     bm.lubang_setom,
                     bm.bongkaran,
-                    bm.asumsi_berat_ikat,                    
+                    bm.asumsi_berat_ikat,
                     pt.name->>'id_ID' AS product,
                     pt.is_cl AS is_cl,
                     pc.name AS product_category,
                     uu.name->>'id_ID' AS uom_category,
-                    COALESCE(uu.weight_per_uom_category, 0) AS weight_per_uom_category,
 
-                    -- tambahan
-                    MAX(COALESCE(pav.weight_per_product_attribute, 0)) AS weight_per_product_attribute,
-                    -- tambahan
+                    bm.tonase,
 
                     MAX(CASE WHEN pa.name->>'id_ID' = 'Grade' THEN pav.name->>'id_ID' END)
                         || ' (' ||
                     MAX(CASE WHEN pa.name->>'id_ID' = 'BOX' THEN pav.name->>'id_ID' END)
-                        || ')' AS classification,
-                    bm.qty
+                        || ')' AS classification
+
                 FROM base_move bm
                 JOIN product_product pp ON bm.product_id = pp.id
                 JOIN product_template pt ON pp.product_tmpl_id = pt.id
@@ -163,13 +159,12 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     bm.pembakar_penutup,
                     bm.lubang_setom,
                     bm.bongkaran,
-                    bm.asumsi_berat_ikat,                    
+                    bm.asumsi_berat_ikat,
                     pt.name->>'id_ID',
                     pt.is_cl,
                     pc.name,
                     uu.name,
-                    uu.weight_per_uom_category,
-                    bm.qty
+                    bm.tonase
             ),
 
             oven_group AS (
@@ -185,48 +180,21 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     pembakar_penutup,
                     lubang_setom,
                     bongkaran,
-                    asumsi_berat_ikat,                    
+                    asumsi_berat_ikat,
                     classification,
                     product_category,
                     uom_category,
-                    weight_per_uom_category,
-
-                    -- Tambahkan ini
-                    MAX(weight_per_product_attribute) AS weight_per_product_attribute,
-                    is_cl AS is_cl,
-                    -- Tambahkan ini
 
                     json_agg(
                         json_build_object(
                             'product', product,
-                            'qty', qty,
-                            'weight_per_product_attribute', weight_per_product_attribute,
-                            'is_cl', is_cl
-                        ) ORDER BY product
+                            'tonase', tonase
+                        )
+                        ORDER BY product
                     ) AS products,
 
+                    SUM(tonase) AS total_per_oven
 
-                    SUM(
-                        CASE
-                            WHEN product_category = 'EXPORT' THEN
-                                CASE
-                                    WHEN is_cl THEN qty   -- ✅ tidak dikali
-                                    ELSE qty * COALESCE(weight_per_product_attribute, 0)
-                                END
-
-                            WHEN product_category IN ('LOKAL','FUEL') THEN
-                                qty * COALESCE(weight_per_uom_category, 0)
-
-                            ELSE qty
-                        END
-                    ) AS total_per_oven,
-
-                    SUM(
-                        CASE
-                            WHEN is_cl THEN qty
-                            ELSE qty * COALESCE(weight_per_uom_category, 0)
-                        END
-                    ) AS total_weight
                 FROM base_data
                 GROUP BY
                     warehouse,
@@ -240,14 +208,11 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     pembakar_penutup,
                     lubang_setom,
                     bongkaran,
-                    asumsi_berat_ikat,                    
+                    asumsi_berat_ikat,
                     classification,
                     product_category,
-                    is_cl,
-                    uom_category,
-                    weight_per_uom_category
+                    uom_category
             ),
-
 
             total_per_grade_cte AS (
                 SELECT
@@ -273,28 +238,28 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             'pembakar_penutup', og.pembakar_penutup,
                             'lubang_setom', og.lubang_setom,
                             'bongkaran', og.bongkaran,
-                            'asumsi_berat_ikat', og.asumsi_berat_ikat,                            
+                            'asumsi_berat_ikat', og.asumsi_berat_ikat,
                             'classification', og.classification,
                             'product_category', og.product_category,
                             'uom_category', og.uom_category,
-                            'weight_per_uom_category', og.weight_per_uom_category,
-
-                            -- tambahan
-                            'weight_per_product_attribute', og.weight_per_product_attribute,
-                            -- tambahan
-
                             'products', og.products,
-                            'total_per_oven', og.total_per_oven,
-                            'total_weight', og.total_weight
+                            'total_per_oven', og.total_per_oven
                         )
                         ORDER BY og.oven
                     ) AS ovens,
-                    json_object_agg(COALESCE(tpg.classification,'UNCLASSIFIED'), tpg.total_per_grade) AS total_per_grade
+
+                    json_object_agg(
+                        COALESCE(tpg.classification,'UNCLASSIFIED'),
+                        tpg.total_per_grade
+                    ) AS total_per_grade
+
                 FROM oven_group og
-                LEFT JOIN total_per_grade_cte tpg ON og.warehouse = tpg.warehouse AND og.classification = tpg.classification
+                LEFT JOIN total_per_grade_cte tpg
+                    ON og.warehouse = tpg.warehouse
+                    AND og.classification = tpg.classification
                 GROUP BY og.warehouse
             )
-            
+
             SELECT json_object_agg(
                 warehouse,
                 json_build_object(
@@ -304,6 +269,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             )
             FROM warehouse_group;
         """
+
         self.env.cr.execute(query, params)
         row = self.env.cr.fetchone()
 
@@ -440,8 +406,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
         data_report = self._get_data_xlsx_report(report_date, warehouse.id if warehouse else None)
         repack_data = self._get_repack_data(report_date, warehouse.id if warehouse else None)
 
-        _logger.info("Repack Data %s", repack_data)
-
         # =========================================================
         # RENDER SHEET
         # =========================================================
@@ -492,8 +456,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             total_per_oven = {}
 
             # ================= AGGREGATE LOKAL & FUEL =================
-            aggregated_special = {}  # key: product name, value: {"qty": x, "uom": y}
-
+            aggregated_special = {}  # key: product name, value: {"tonase": x, "uom": y}
             other_ovens = []
 
             for o in ovens:
@@ -501,15 +464,17 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 if category in ["LOKAL", "FUEL"]:
                     for p in o.get("products", []):
                         product_name = p.get("product")
-                        qty = p.get("qty", 0)
+                        tonase = p.get("tonase", 0)
                         uom = o.get("uom_category")
                         category = o.get("product_category")
+
                         if product_name in aggregated_special:
-                            aggregated_special[product_name]["qty"] += qty
+                            aggregated_special[product_name]["tonase"] += tonase
                         else:
-                            aggregated_special[product_name] = {"qty": qty, "uom": uom, "category": category}
+                            aggregated_special[product_name] = {"tonase": tonase, "uom": uom, "category": category}
                 else:
                     other_ovens.append(o)  # keep other products for normal mapping
+                _logger.info("Logger aggregated_special: %s", aggregated_special)
 
             # ================= MAP OTHER OVENS =================
             for o in other_ovens:
@@ -538,18 +503,12 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 for p in o.get("products", []):
                     product = p.get("product")
-                    qty = p.get("qty", 0)
-                    weight = p.get("weight_per_product_attribute", 0)                    
+                    tonase = p.get("tonase", 0)
 
-                    data_map[grade][oven_key]["products"].setdefault(product, {"qty": 0, "weight": 0})
-                    data_map[grade][oven_key]["products"][product]["qty"] += qty
-                    data_map[grade][oven_key]["products"][product]["weight"] = p.get("weight_per_product_attribute", 0)
+                    data_map[grade][oven_key]["products"].setdefault(product, {"tonase": 0})
+                    data_map[grade][oven_key]["products"][product]["tonase"] += tonase
 
-                    weight = p.get("weight_per_product_attribute", 0)
-                    if o.get("product_category") == "EXPORT":
-                        total_per_oven[oven_key] += qty * weight
-                    else:
-                        total_per_oven[oven_key] += qty
+                    total_per_oven[oven_key] += tonase
 
             # ================= COMPUTE TOTAL PER GRADE =================
             if total_per_grade is None:
@@ -558,7 +517,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     oven_data = data_map[grade]
 
             unclassified_total = sum(
-                p.get("qty", 0)
+                p.get("tonase", 0)
                 for o in ovens
                 if not o.get("classification")
                 for p in o.get("products", [])
@@ -623,7 +582,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                         products = sorted(data["products"].items())
 
                         qty_str = " | ".join(
-                            f"{fmt_qty(float(q['qty']))}"
+                            f"{fmt_qty(float(q['tonase']))}"
                             for _, q in products
                         )
 
@@ -642,7 +601,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
             # ================= WRITE LOKAL/FUEL PER OVEN (TANPA HEADER) =================
             if aggregated_special:
-                # product -> oven -> list[{qty, uom}]
+                _logger.info("aggregated_special 1: %s", aggregated_special)
                 product_per_oven = {}
 
                 for o in ovens:
@@ -651,7 +610,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                         for p in o.get("products", []):
                             product_name = p.get("product")
-                            qty = p.get("qty", 0)
+                            qty = p.get("tonase", 0)
                             uom = o.get("uom_category")
 
                             product_per_oven.setdefault(product_name, {})
@@ -664,19 +623,9 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 products = sorted(product_per_oven.keys())
 
                 for product_name in products:
+                    max_lines = 1
+
                     oven_grouped_data = {}
-
-                    # Ambil seluruh UOM dari semua oven untuk produk ini
-                    all_uoms = sorted(
-                        {
-                            item["uom"]
-                            for oven_items in product_per_oven[product_name].values()
-                            for item in oven_items
-                        },
-                        key=lambda x: x.lower()
-                    )
-
-                    max_lines = len(all_uoms)
 
                     for oven in oven_list:
                         items = product_per_oven[product_name].get(oven, [])
@@ -686,33 +635,54 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             grouped.setdefault(item["uom"], [])
                             grouped[item["uom"]].append(item["qty"])
 
-                        grouped_list = []
-
-                        for uom in all_uoms:
-                            qtys = grouped.get(uom, [])
-
-                            grouped_list.append({
+                        grouped_list = [
+                            {
                                 "uom": uom,
-                                "qty_str": " | ".join(str(fmt_qty(q)) for q in qtys) if qtys else "-"
-                            })
+                                "qty_str": " | ".join(str(fmt_qty(q)) for q in qtys)
+                            }
+                            for uom, qtys in grouped.items()
+                        ]
 
                         oven_grouped_data[oven] = grouped_list
 
-                    for line_index in range(max_lines):
-                        uom_str = all_uoms[line_index]
+                        if len(grouped_list) > max_lines:
+                            max_lines = len(grouped_list)
 
-                        display_name = f"{product_name} ({uom_str})"
+                    for line_index in range(max_lines):
+
+                        grouped_list_first = next(
+                            (
+                                oven_grouped_data.get(oven, [])
+                                for oven in oven_list
+                                if oven_grouped_data.get(oven, [])
+                            ),
+                            []
+                        )
+
+                        if line_index < len(grouped_list_first):
+                            uom_str = grouped_list_first[line_index]["uom"]
+                        else:
+                            uom_str = ""
+
+                        display_name = (
+                            f"{product_name} ({uom_str})"
+                            if uom_str else product_name
+                        )
 
                         sheet.write(row + line_index, 0, display_name, fmt_grade)
 
                         col = 1
 
                         for oven in oven_list:
-                            data = oven_grouped_data[oven][line_index]
+                            grouped_list = oven_grouped_data.get(oven, [])
 
-                            if data["qty_str"] != "-":
-                                sheet.write(row + line_index, col, data["qty_str"], fmt_number)
-                                sheet.write(row + line_index, col + 1, data["uom"], fmt_text_center)
+                            if line_index < len(grouped_list):
+                                data = grouped_list[line_index]
+                                qty_str = data["qty_str"]
+                                uom_str = data["uom"]
+
+                                sheet.write(row + line_index, col, qty_str, fmt_number)
+                                sheet.write(row + line_index, col + 1, uom_str, fmt_text_center)
                             else:
                                 sheet.write(row + line_index, col, "-", fmt_number)
                                 sheet.write(row + line_index, col + 1, "-", fmt_text_center)
@@ -720,7 +690,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             col += 2
 
                     row += max_lines
-
             # ================= TOTAL ROW =================
             sheet.write(row, 0, "TOTAL QTY (KG)", fmt_header)
             col = 1
@@ -732,6 +701,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     oven_key = _get_oven_key(o.get("oven"), o.get("production_date")) or "NONE"
                     if oven_key == oven:
                         total += o.get("total_per_oven", 0)
+
+                _logger.info("Total per oven: %s, oven: %s", total, oven)
 
                 sheet.merge_range(row, col, row, col + 1, total if total else "-", fmt_total)
                 col += 2
@@ -757,16 +728,14 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                             for p in o.get("products", []):
                                 product = p.get("product")
-                                qty = p.get("qty", 0)
+                                tonase = p.get("tonase", 0)
                                 uom = o.get("uom_category")
-                                weight = p.get("weight_per_product_attribute", 0)
-                                is_cl = p.get("is_cl", False)
 
                                 # ================= QTY ASLI =================
-                                product_qty_raw[product] = product_qty_raw.get(product, 0) + qty
+                                product_qty_raw[product] = product_qty_raw.get(product, 0) + tonase
 
                                 # ================= TOTAL =================
-                                value = qty if is_cl else qty * weight
+                                value = tonase
                                 product_qty[product] = product_qty.get(product, 0) + value
 
                     if not product_qty:
@@ -789,6 +758,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     
             # ================= LOOP PRODUK LOKAL / FUEL =================
             if aggregated_special:
+                _logger.info("aggregated_special: %s", aggregated_special)
                 for p_name, p_data in sorted(aggregated_special.items()):
                     category = p_data.get("category", "-")
 
@@ -805,30 +775,27 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             if p.get("product") != p_name:
                                 continue
 
-                            qty = p.get("qty", 0)
+                            tonase = p.get("tonase", 0)
                             uom = o.get("uom_category")
-                            is_cl = p.get("is_cl", False)
-                            weight = o.get("weight_per_uom_category", 1)
-                            value = qty if is_cl else qty * weight
 
                             if uom not in uom_data:
                                 uom_data[uom] = {
-                                    "qty": 0,
+                                    "tonase": 0,
                                     "total": 0,
                                 }
 
-                            uom_data[uom]["qty"] += qty
-                            uom_data[uom]["total"] += value
+                            uom_data[uom]["tonase"] += tonase
+                            uom_data[uom]["total"] += tonase
 
                     # ============================================
                     # WRITE ROW PER UOM
                     # ============================================
                     for uom, vals in sorted(uom_data.items()):
-                        qty = vals["qty"]
+                        tonase = vals["tonase"]
                         total = vals["total"]
 
                         sheet.write(grade_row, grade_col_start, p_name, fmt_text_center)
-                        sheet.write(grade_row, grade_col_start + 1, fmt_qty(qty), fmt_number)
+                        sheet.write(grade_row, grade_col_start + 1, fmt_qty(tonase), fmt_number)
                         sheet.write(grade_row, grade_col_start + 2, fmt_qty(total), fmt_grade_total)
                         sheet.write(grade_row, grade_col_start + 3, uom, fmt_grade)
 
@@ -841,15 +808,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 category = o.get("product_category")
 
                 for p in o.get("products", []):
-                    qty = p.get("qty", 0)
-                    weight = p.get("weight_per_product_attribute", 0)
-                    weight_lokal = o.get("weight_per_uom_category", 1)
-                    is_cl = p.get("is_cl", False)
-
-                    if category == "EXPORT":
-                        total_all_grades += qty * weight
-                    elif category in ["LOKAL", "FUEL"]:
-                        total_all_grades += qty if is_cl else qty * weight_lokal
+                    tonase = p.get("tonase", 0)
+                    total_all_grades += tonase
 
             sheet.write(grade_row, grade_col_start + 2, fmt_qty(total_all_grades), fmt_total)
             sheet.write(grade_row, grade_col_start + 3, "TTL TONASE", fmt_header)
@@ -859,7 +819,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
             sheet.write(grade_row + 1, grade_col_start + 2, fmt_qty(average_per_oven), fmt_total)
             sheet.write(grade_row + 1, grade_col_start + 3, "RATA-RATA", fmt_header)
-
 
             # ================= COLUMN WIDTH =================
             sheet.set_column(0, 0, 25)  # PICKING / GRADE

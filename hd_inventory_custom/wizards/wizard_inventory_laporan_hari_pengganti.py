@@ -20,8 +20,6 @@ class WizardInventoryLaporanHariPengganti(models.TransientModel):
         report_date = self.date.strftime('%d-%m-%Y')
         warehouse_name = self.warehouse_id.name if self.warehouse_id else 'Semua Gudang'
         filename = f"Laporan Harian {warehouse_name} - {report_date}"
-        if self.report_type:
-            filename += f" ({dict(SELECTION_REPORT_TYPE)[self.report_type]})"
         
         report_obj = self.env.ref('hd_inventory_custom.inventory_laporan_hari_pengganti_tonase_base_xlsx')
         
