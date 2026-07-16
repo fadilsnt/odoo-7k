@@ -625,7 +625,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
             # ================= WRITE LOKAL/FUEL PER OVEN (TANPA HEADER) =================
             if aggregated_special:
-                # produk -> oven -> list[{qty, uom}]
+                # product -> oven -> list[{qty, uom}]
                 product_per_oven = {}
 
                 for o in ovens:
@@ -775,9 +775,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 for p_name, p_data in sorted(aggregated_special.items()):
                     category = p_data.get("category", "-")
 
-                    # ============================================
-                    # uom -> data
-                    # ============================================
+                    # uom -> qty & total
                     uom_data = {}
 
                     for o in ovens:
@@ -828,7 +826,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     tonase = p.get("tonase") or 1
                     is_cl = p.get("is_cl", False)
 
-                    total_all_grades += (qty * tonase)
+                    total_all_grades += qty if is_cl else qty * tonase
 
             sheet.write(grade_row, grade_col_start + 2, fmt_qty(total_all_grades), fmt_total)
             sheet.write(grade_row, grade_col_start + 3, "TTL TONASE", fmt_header)

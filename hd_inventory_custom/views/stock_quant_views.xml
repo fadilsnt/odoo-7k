@@ -6,9 +6,6 @@
         <field name="model">stock.quant</field>
         <field name="inherit_id" ref="stock.view_stock_quant_tree_inventory_editable"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='inventory_quantity']" position="after">
-                <field name="notes" required="inventory_diff_quantity" optional="show"/>
-            </xpath>
             <xpath expr="//list//field[@name='inventory_diff_quantity']" position="after">
                 <field name="available_tonase_asli" string="Available Tonase Asli" optional="hide"/>
                 <field name="tonase_asli" string="Tonase asli" readonly="1" optional="show"/>
