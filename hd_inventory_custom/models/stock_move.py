@@ -77,6 +77,9 @@ class StockMove(models.Model):
     
     def _recompute_quantities(self):
         for move in self:
+            if not move._context.get('bypass_move_rule', False):
+                continue
+
             total_qty = sum(
                 move.move_line_ids.filtered(
                     lambda l: l.state != 'cancel'

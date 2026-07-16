@@ -17,29 +17,43 @@
 
             <xpath expr="//notebook" position="inside">
                 <page name="laporan_harian" string="Laporan Harian">
-                    <field name="move_line_ids" widget="one2many_search">
-                        <list editable="bottom" create="0" limit="999">
-                            <field name="product_id"/>
-                            <field name="quantity" />
-                            <field name="product_uom_category_id" column_invisible="1"/>
-                            <field name="product_uom_id" readonly="0"/>
-                            <field name="tonase_asli" />
-                            <field name="oven_number" />
-                            <field name="production_date" />
-                            <field name="line_packing" />
-                            <field name="camp_tgl_briket" />
-                            <field name="briket_tgu" />
-                            <field name="shift_briket" />
-                            <field name="pembakar_penutup" />
-                            <field name="asumsi_berat_ikat" />
-                            <field name="lubang_setom" />
-                            <field name="bongkaran" />
-                        </list>
-                    </field>
+                    <notebook>
+                        <page name="product_line_ids" string="Product Lines">
+                            <field name="move_line_ids" widget="one2many_search">
+                                <list editable="bottom" create="0" limit="999">
+                                    <field name="product_id"/>
+                                    <field name="quantity" />
+                                    <field name="product_uom_category_id" column_invisible="1"/>
+                                    <field name="product_uom_id" readonly="0"/>
+                                    <field name="tonase_asli" />
+                                    <field name="oven_number" />
+                                    <field name="production_date" />
+                                    <field name="line_packing" />
+                                    <field name="camp_tgl_briket" />
+                                    <field name="briket_tgu" />
+                                    <field name="shift_briket" />
+                                    <field name="pembakar_penutup" />
+                                    <field name="asumsi_berat_ikat" />
+                                    <field name="lubang_setom" />
+                                    <field name="bongkaran" />
+                                </list>
+                            </field>
+                        </page>
+                        <page name="consume_line_ids" string="Consume Lines" invisible="picking_type_code == 'incoming'">
+                            <field name="consume_line_ids" widget="one2many_search">
+                                <list editable="bottom" create="0" limit="999">
+                                    <field name="product_id"/>
+                                    <field name="qty"/>
+                                    <field name="product_uom_category_id" column_invisible="1"/>
+                                    <field name="product_uom_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
                 </page>
             </xpath>
 
-            <xpath expr="//page[@name='operations']" position="inside">
+            <!-- <xpath expr="//page[@name='operations']" position="inside">
                 <separator string="Consumed Products" invisible="not consume_move_ids"/>
                 <field name="consume_move_ids" readonly="1" invisible="not consume_move_ids">
                     <list>
@@ -53,7 +67,7 @@
                         <field name="state" optional="hide"/>
                     </list>
                 </field>
-            </xpath>
+            </xpath> -->
 
             <xpath expr="//field[@name='owner_id']" position="after">
                 <field name="pemilik_ids" widget="many2many_tags" readonly="1" invisible="1"/>

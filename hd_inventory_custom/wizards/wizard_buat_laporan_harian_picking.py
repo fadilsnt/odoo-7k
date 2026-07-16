@@ -5,9 +5,13 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
     _description = "Wizard Buat Laporan Harian Picking"
 
     picking_id = fields.Many2one('stock.picking', required=True, readonly=True)
+    picking_type_code = fields.Selection(
+        related='picking_id.picking_type_code',
+        readonly=True)
     oven_number = fields.Char(string="Nomor Oven")
     production_date = fields.Date(string="Tanggal Produksi")
     product_line_ids = fields.One2many('wizard.buat.laporan.harian.picking.line', 'wizard_id', string="Product Lines")
+    consume_line_ids = fields.One2many('wizard.buat.laporan.harian.consume.line', 'wizard_id', string="Consume")
     location_dest_id = fields.Many2one('stock.location', 'To', domain="[('usage', '!=', 'view')]", check_company=True, required=True, readonly=True)
 
     line_packing = fields.Char(string="Line")
@@ -52,6 +56,8 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
 
         for move in moves:
             self._sync_move_quantity(move)
+        
+        self._sync_picking_consume()
 
     def _get_or_create_move(self, line, Move):
         move = Move.search([
@@ -139,6 +145,56 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
         else:
             vals = self._prepare_move_line_vals(move, line)
             MoveLine.create(vals)
+    
+    def _sync_picking_consume(self):
+        for line in self.consume_line_ids:
+            if line.product_id.id not in self.picking_id.consume_line_ids.mapped('product_id').ids:
+                self.picking_id.consume_line_ids.create({
+                    'picking_id': self.picking_id.id,
+                    'product_id': line.product_id.id,
+                    'qty': line.qty,
+                    'product_uom_id': line.product_uom_id.id,
+                })
+            else:
+                for consume in self.picking_id.consume_line_ids.filtered(lambda l: l.product_id.id == line.product_id.id):
+                    consume.write({
+                        'qty': line.qty,
+                        'product_uom_id': line.product_uom_id.id,
+                    })
+    
+    def update_consume(self):
+        self.ensure_one()
+
+        for line in self.product_line_ids:
+            if not line.product_id.consume_product_ids:
+                continue
+            
+            for product in line.product_id.consume_product_ids:
+                if product.id not in self.consume_line_ids.mapped('product_id').ids:
+                    self.consume_line_ids.create({
+                        'wizard_id': self.id,
+                        'product_id': product.id,
+                        'qty': line.qty,
+                        'product_uom_id': product.uom_id.id,
+                    })
+                else:
+                    for consume in self.consume_line_ids.filtered(lambda l: l.product_id.id == product.id):
+                        consume.write({
+                            'qty': line.qty,
+                        })
+        
+        return self._reopen()
+
+    def _reopen(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Laporan Harian Picking',
+            'res_model': self._name,
+            'res_id': self.id,
+            'view_mode': 'form',
+            'target': 'new',
+            'context': self.env.context,
+        }
 
 class WizardBuatLaporanHarianPickingLine(models.TransientModel):
     _name = 'wizard.buat.laporan.harian.picking.line'
@@ -151,6 +207,23 @@ class WizardBuatLaporanHarianPickingLine(models.TransientModel):
 
     qty = fields.Float(string="Qty")
     tonase_asli = fields.Float(string="Tonase Asli")
+
+    @api.onchange('product_id')
+    def _onchange_product_id(self):
+        if self.product_id:
+            self.product_uom_id = self.product_id.uom_id
+        else:
+            self.product_uom_id = False
+
+class WizardBuatLaporanHarianConsumeLine(models.TransientModel):
+    _name = 'wizard.buat.laporan.harian.consume.line'
+    _description = "Wizard Consume Line"
+
+    wizard_id = fields.Many2one('wizard.buat.laporan.harian.picking', required=True, ondelete='cascade')
+    product_id = fields.Many2one('product.product', string="Product")
+    product_uom_category_id = fields.Many2one('uom.category', related='product_id.uom_id.category_id', store=False, readonly=True)
+    product_uom_id = fields.Many2one('uom.uom', string='Unit of Measure', domain="[('category_id', '=', product_uom_category_id)]")
+    qty = fields.Float(string="Qty")
 
     @api.onchange('product_id')
     def _onchange_product_id(self):
