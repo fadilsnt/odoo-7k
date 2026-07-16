@@ -3,6 +3,10 @@ from collections import OrderedDict, defaultdict
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import (float_compare, OrderedSet)
 
+import logging
+
+_logger = logging.getLogger(__name__)
+
 class StockMoveLine(models.Model):
     _inherit = 'stock.move.line'
 
@@ -40,12 +44,14 @@ class StockMoveLine(models.Model):
         for ml in self:
             uom_qty = ml.product_uom_id._compute_quantity(ml.quantity, ml.product_id.uom_id, round=False)
             precision_digits = self.env['decimal.precision'].precision_get('Product Unit of Measure')
-            quantity = float(fields.Float.round(ml.quantity, precision_digits))
-            if float_compare(uom_qty, quantity, precision_digits=precision_digits) != 0:
-                raise UserError(_('The quantity done for the product "%(product)s" doesn\'t respect the rounding precision '
-                                  'defined on the unit of measure "%(unit)s". Please change the quantity done or the '
-                                  'rounding precision of your unit of measure.',
-                                  product=ml.product_id.display_name, unit=ml.product_uom_id.name))
+            quantity = float(fields.Float.round(ml.quantity, precision_digits))     
+            
+            if not ml.from_wizard:
+                if float_compare(uom_qty, quantity, precision_digits=precision_digits) != 0:
+                    raise UserError(_('The quantity done for the product "%(product)s" doesn\'t respect the rounding precision '
+                                    'defined on the unit of measure "%(unit)s". Please change the quantity done or the '
+                                    'rounding precision of your unit of measure.',
+                                    product=ml.product_id.display_name, unit=ml.product_uom_id.name))
 
             qty_done_float_compared = float_compare(ml.quantity, 0, precision_rounding=ml.product_uom_id.rounding)
             if qty_done_float_compared > 0:

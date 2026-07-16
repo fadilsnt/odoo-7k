@@ -258,46 +258,52 @@ class StockPicking(models.Model):
                             move.product_uom_qty,
                             move.product_uom.name,
                         ))
-            
-            # picking._validate_picking_consume()
 
-        # self._compute_btb_number()
-        res = super().button_validate()
+        self._compute_btb_number()
+        for ml in picking.move_line_ids:
+            _logger.info(
+                "qty=%.17f rounding=%.17f",
+                ml.quantity,
+                ml.product_uom_id.rounding,
+            )      
+     
+        res = super().button_validate()            
+
         for picking in self:
             if picking.picking_type_code != 'incoming':
                 picking._validate_picking_consume()
 
-        # for picking in self:
-        #     if self.env['stock.move'].search([
-        #         ('picking_id', '=', picking.id),
-        #         ('is_consume', '=', True)
-        #     ]):
-        #         continue
+            ## OLD FUNCTION CONSUME
+            # if self.env['stock.move'].search([
+            #     ('picking_id', '=', picking.id),
+            #     ('is_consume', '=', True)
+            # ]):
+            #     continue
 
-        #     consumed_moves = self._validate_consume_products(picking)
+            # consumed_moves = self._validate_consume_products(picking)
 
-        #     if consumed_moves:
-        #         moves = self.env['stock.move'].create(consumed_moves)
+            # if consumed_moves:
+            #     moves = self.env['stock.move'].create(consumed_moves)
 
-        #         moves._action_confirm()
-        #         moves._action_assign()
+            #     moves._action_confirm()
+            #     moves._action_assign()
 
-        #         for move in moves:
-        #             if not move.move_line_ids:
-        #                 self.env['stock.move.line'].create({
-        #                     'move_id': move.id,
-        #                     'product_id': move.product_id.id,
-        #                     'product_uom_id': move.product_uom.id,
-        #                     'quantity': move.product_uom_qty,
-        #                     'location_id': move.location_id.id,
-        #                     'location_dest_id': move.location_dest_id.id,
-        #                 })
+            #     for move in moves:
+            #         if not move.move_line_ids:
+            #             self.env['stock.move.line'].create({
+            #                 'move_id': move.id,
+            #                 'product_id': move.product_id.id,
+            #                 'product_uom_id': move.product_uom.id,
+            #                 'quantity': move.product_uom_qty,
+            #                 'location_id': move.location_id.id,
+            #                 'location_dest_id': move.location_dest_id.id,
+            #             })
 
-        #             else:
-        #                 for ml in move.move_line_ids:
-        #                     ml.quantity = move.product_uom_qty
-
-        #         moves._action_done()
+            #         else:
+            #             for ml in move.move_line_ids:
+            #                 ml.quantity = move.product_uom_qty
+            
+            #     moves._action_done()
 
         return res
     

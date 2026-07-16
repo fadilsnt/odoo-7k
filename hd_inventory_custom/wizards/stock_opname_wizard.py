@@ -148,18 +148,18 @@ class StockOpnameWizard(models.TransientModel):
                         if move_ids:
                             diff_notes = move_ids[0].notes or move_ids[0].reference
                     
-                    worksheet1.write(i, 0, product_number if first_variant == 1 else '', content_center_format)
-                    worksheet1.merge_range(i, 1, i, 2, variant.display_name, content_left_format)
-                    worksheet1.write(i, 3, before_qty, content_numb_format)
-                    worksheet1.write(i, 4, current_qty, content_numb_format)
-                    worksheet1.write(i, 5, diff_qty, content_numb_format)
-                    worksheet1.merge_range(i, 6, i, 7, diff_notes, content_left_format)
-                    i += 1
-                    first_variant += 1
+                    if before_qty > 0:
+                        worksheet1.write(i, 0, product_number if first_variant == 1 else '', content_center_format)
+                        worksheet1.merge_range(i, 1, i, 2, variant.display_name, content_left_format)
+                        worksheet1.write(i, 3, before_qty, content_numb_format)
+                        worksheet1.write(i, 4, current_qty, content_numb_format)
+                        worksheet1.write(i, 5, diff_qty, content_numb_format)
+                        worksheet1.merge_range(i, 6, i, 7, diff_notes, content_left_format)
+                        i += 1
+                        first_variant += 1
                 
-                product_number += 1
-                if not product.product_variant_ids:
-                    i += 1
+                if first_variant > 1:
+                    product_number += 1
 
             i += 2
         
