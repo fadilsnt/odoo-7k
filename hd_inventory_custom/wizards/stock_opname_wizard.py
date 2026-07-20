@@ -68,7 +68,7 @@ class StockOpnameWizard(models.TransientModel):
         content_center_format.set_font_size('12')
         content_center_format.set_border()
         #################################################################################
-        content_numb_format = workbook.add_format({'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
+        content_numb_format = workbook.add_format({'valign':'vcenter', 'align':'right'})
         content_numb_format.set_font_size('12')
         content_numb_format.set_border()
         #################################################################################
@@ -108,17 +108,6 @@ class StockOpnameWizard(models.TransientModel):
 
         i = 3
         for category in self.category_ids:
-            worksheet1.merge_range(i, 0, i, 7, '' + category.name.upper(), header_title)
-            i += 1
-            worksheet1.write(i, 0, 'NO', header_table)
-            worksheet1.merge_range(i, 1, i, 2, 'NAMA BARANG', header_table)
-            worksheet1.write(i, 3, 'STOK AWAL', header_table)
-            worksheet1.write(i, 4, 'OPNAME', header_table)
-            worksheet1.write(i, 5, 'SELISIH', header_table)
-            worksheet1.merge_range(i, 6, i, 7, 'KETERANGAN', header_table)
-            i += 1
-            product_number = 1
-
             self._cr.execute(
                 """
                     SELECT pt.id FROM product_template pt
@@ -126,42 +115,59 @@ class StockOpnameWizard(models.TransientModel):
                     ORDER BY pt.name asc
                 """, (category.id,))
             product_ids = self.env['product.template'].browse([r[0] for r in self._cr.fetchall()])
-            for product in product_ids:
-                first_variant = 1
-                for variant in product.product_variant_ids:
-                    before_qty = variant.with_context(warehouse_id=self.warehouse_id.id, to_date=before_date).qty_available
-                    current_qty = variant.with_context(warehouse_id=self.warehouse_id.id, to_date=current_date).qty_available
-                    diff_qty = current_qty - before_qty
-                    diff_notes = ''
-                    if diff_qty != 0:
-                        self._cr.execute("""
-                            SELECT sm.id
-                            FROM stock_move sm
-                                JOIN stock_location src ON src.id = sm.location_id
-                                JOIN stock_location dst ON dst.id = sm.location_dest_id
-                            WHERE
-                                (src.usage = 'inventory' OR dst.usage = 'inventory') AND (src.warehouse_id = %s OR dst.warehouse_id = %s)
-                                AND sm.product_id = %s AND sm.date BETWEEN %s AND %s AND sm.state = 'done'
-                            ORDER BY sm.date desc
-                        """, (self.warehouse_id.id, self.warehouse_id.id, variant.id, start_date, end_date, ))
-                        move_ids = self.env['stock.move'].sudo().browse([r[0] for r in self._cr.fetchall()])
-                        if move_ids:
-                            diff_notes = move_ids[0].notes or move_ids[0].reference
-                    
-                    if before_qty > 0:
-                        worksheet1.write(i, 0, product_number if first_variant == 1 else '', content_center_format)
-                        worksheet1.merge_range(i, 1, i, 2, variant.display_name, content_left_format)
-                        worksheet1.write(i, 3, before_qty, content_numb_format)
-                        worksheet1.write(i, 4, current_qty, content_numb_format)
-                        worksheet1.write(i, 5, diff_qty, content_numb_format)
-                        worksheet1.merge_range(i, 6, i, 7, diff_notes, content_left_format)
-                        i += 1
-                        first_variant += 1
-                
-                if first_variant > 1:
-                    product_number += 1
 
-            i += 2
+            sum_before_qty = sum(sum(vr.with_context(warehouse_id=self.warehouse_id.id, to_date=before_date).qty_available for vr in product.product_variant_ids) or 0.0 for product in product_ids) or 0.0
+            sum_current_qty = sum(sum(vr.with_context(warehouse_id=self.warehouse_id.id, to_date=before_date).qty_available for vr in product.product_variant_ids) or 0.0 for product in product_ids) or 0.0
+            sum_diff_qty = sum_current_qty - sum_before_qty
+            if sum_before_qty != 0 or sum_current_qty != 0:
+                worksheet1.merge_range(i, 0, i, 7, '' + category.name.upper(), header_title)
+                i += 1
+                worksheet1.write(i, 0, 'NO', header_table)
+                worksheet1.merge_range(i, 1, i, 2, 'NAMA BARANG', header_table)
+                worksheet1.write(i, 3, 'STOK AWAL', header_table)
+                worksheet1.write(i, 4, 'OPNAME', header_table)
+                worksheet1.write(i, 5, 'SELISIH', header_table)
+                worksheet1.merge_range(i, 6, i, 7, 'KETERANGAN', header_table)
+                i += 1
+                product_number = 1
+
+                for product in product_ids:
+                    
+                    first_variant = 1
+                    for variant in product.product_variant_ids:
+                        before_qty = variant.with_context(warehouse_id=self.warehouse_id.id, to_date=before_date).qty_available
+                        current_qty = variant.with_context(warehouse_id=self.warehouse_id.id, to_date=current_date).qty_available
+                        diff_qty = current_qty - before_qty
+                        diff_notes = ''
+                        if diff_qty != 0:
+                            self._cr.execute("""
+                                SELECT sm.id
+                                FROM stock_move sm
+                                    JOIN stock_location src ON src.id = sm.location_id
+                                    JOIN stock_location dst ON dst.id = sm.location_dest_id
+                                WHERE
+                                    (src.usage = 'inventory' OR dst.usage = 'inventory') AND (src.warehouse_id = %s OR dst.warehouse_id = %s)
+                                    AND sm.product_id = %s AND sm.date BETWEEN %s AND %s AND sm.state = 'done'
+                                ORDER BY sm.date desc
+                            """, (self.warehouse_id.id, self.warehouse_id.id, variant.id, start_date, end_date, ))
+                            move_ids = self.env['stock.move'].sudo().browse([r[0] for r in self._cr.fetchall()])
+                            if move_ids:
+                                diff_notes = move_ids[0].notes or move_ids[0].reference
+                        
+                        if before_qty != 0 or current_qty != 0:
+                            worksheet1.write(i, 0, product_number if first_variant == 1 else '', content_center_format)
+                            worksheet1.merge_range(i, 1, i, 2, variant.display_name, content_left_format)
+                            worksheet1.write(i, 3, before_qty if before_qty else '-', content_numb_format)
+                            worksheet1.write(i, 4, current_qty if current_qty else '-', content_numb_format)
+                            worksheet1.write(i, 5, diff_qty if diff_qty else '-', content_numb_format)
+                            worksheet1.merge_range(i, 6, i, 7, diff_notes, content_left_format)
+                            i += 1
+                            first_variant += 1
+                    
+                    if first_variant > 1:
+                        product_number += 1
+
+                i += 2
         
         i += 1
         worksheet1.merge_range(i, 0, i, 1, 'ADM. PRODUKSI', sign_center_format)

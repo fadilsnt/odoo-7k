@@ -969,25 +969,12 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 tuple(path_params)
             )
             variant_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
-
-            # self._cr.execute(
-            #     """
-            #         SELECT pp.id
-            #         FROM product_product pp
-            #             JOIN product_template pt ON pt.id = pp.product_tmpl_id
-            #             JOIN product_category pc ON pt.categ_id = pc.id
-            #             JOIN uom_uom uom ON uom.id = pt.uom_id
-            #         WHERE pt.type = 'consu' AND pc.name IN ('BAHAN PENOLONG','BAHAN PACKING') AND pp.active = true
-            #         ORDER BY uom.name asc, pt.name asc
-            #     """)
-            # variant_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
-
             for uom, variants_group in groupby(variant_ids, key=lambda v: v.uom_id):
                 sum_row = bp_row
                 total_row = 0
                 sum_ending = 0.0
                 for variant in variants_group:
-                    beginning_qty = variant.with_context(warehouse_id=warehouse_id, to_date=before_date).qty_available
+                    beginning_qty = variant.with_context(warehouse_id=warehouse_id, to_date=before_date).virtual_available
 
                     self._cr.execute(
                         """
@@ -995,16 +982,18 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                                 JOIN stock_location src ON src.id = sml.location_id
                                 JOIN stock_location dst ON dst.id = sml.location_dest_id
                             WHERE (src.warehouse_id=%s OR dst.warehouse_id=%s) AND
-                                sml.product_id = %s AND sml.date BETWEEN %s AND %s AND sml.state='done'
+                                sml.product_id = %s AND sml.date BETWEEN %s AND %s AND sml.state in ('waiting', 'confirmed', 'assigned', 'partially_available')
                             ORDER BY sml.date asc, sml.id
                         """, (warehouse_id, warehouse_id, variant.id, current_min_date, current_max_date, ))
                     move_ids = self.env['stock.move.line'].browse([r[0] for r in self._cr.fetchall()])
+
+                    print ("========",move_ids)
 
                     qty_in = sum(move.quantity for move in move_ids.filtered(lambda m: m.location_dest_id.warehouse_id.id == warehouse_id)) or 0.0
                     qty_out = sum(move.quantity for move in move_ids.filtered(lambda m: m.location_id.warehouse_id.id == warehouse_id)) or 0.0
                     ending_qty = beginning_qty + qty_in - qty_out
 
-                    if beginning_qty or ending_qty:
+                    if beginning_qty != 0 or ending_qty != 0:
                         sheet.write(bp_row, 0, variant.name, fmt_text_left)
                         sheet.merge_range(bp_row, 1, bp_row, 2, beginning_qty if beginning_qty else "-", fmt_num)
                         sheet.merge_range(bp_row, 3, bp_row, 4, qty_in if qty_in else "-", fmt_num)
@@ -1015,7 +1004,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                         total_row += 1
                         sum_ending += ending_qty
 
-                sheet.merge_range(sum_row, 9, sum_row + (total_row - 1 if total_row > 0 else 0), 10, sum_ending if sum_ending else "-", fmt_num_bold)
+                if total_row != 0:
+                    sheet.merge_range(sum_row, 9, sum_row + (total_row - 1 if total_row > 0 else 0), 10, sum_ending if sum_ending != 0 else "-", fmt_num_bold)
 
             # ================= PRODUCT EXPORT =================
             elf_row = footer_row + 2
@@ -1031,7 +1021,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     ORDER BY pt.name asc
                 """)
             export_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
-            
+
             def get_attr_ptav(variant, attr_name):
                 for ptav in variant.product_template_attribute_value_ids:
                     if ptav.attribute_id.name.lower() == attr_name.lower():
@@ -1040,7 +1030,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
             export_data = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
             cont_value_map = defaultdict(dict)
-            grade_set_per_box = defaultdict(set)
             box_weight_map = {}
 
             for variant in export_ids:
@@ -1056,10 +1045,9 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 if box not in box_weight_map:
                     box_weight_map[box] = box_ptav.product_attribute_value_id.weight_per_product_attribute or 0.0
 
-                stock_qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).qty_available
-                forecast_qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
-                export_data[box][desain][grade] += (stock_qty + forecast_qty)
-                grade_set_per_box[box].add(grade)
+                forecast_before_qty = variant.with_context(warehouse_id=warehouse_id, to_date=before_date).virtual_available
+                forecast_current_qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
+                export_data[box][desain][grade] += (forecast_current_qty - forecast_before_qty)
 
                 if cont:
                     try:
@@ -1070,12 +1058,20 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             sorted_boxes = sorted(export_data.keys(), key=lambda b: box_weight_map.get(b, 0.0))
             for box in sorted_boxes:
                 desain_dict = export_data[box]
-                grades = sorted(grade_set_per_box[box])  # urutan kolom grade
+                
+                grade_totals = defaultdict(float)
+                for desain, grade_qty in desain_dict.items():
+                    for grade, qty in grade_qty.items():
+                        grade_totals[grade] += qty
+
+                grades = sorted(g for g, total in grade_totals.items() if total != 0)
+                if not grades:
+                    continue
 
                 valid_box = {}
                 for desain, grade_qty in desain_dict.items():
                     valid_qty = sum(grade_qty.get(grade, 0.0) for grade in grades)
-                    if valid_qty > 0:
+                    if valid_qty != 0:
                         valid_box[desain] = valid_qty
 
                 if not valid_box:
@@ -1097,18 +1093,18 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 for desain, grade_qty in desain_dict.items():
                     row_total = sum(grade_qty.get(grade, 0.0) for grade in grades)
-                    if row_total > 0:
+                    if row_total != 0:
                         sheet.write(elf_row, elf_col, desain, fmt_text_left)
                         for i, grade in enumerate(grades):
                             qty = grade_qty.get(grade, 0.0)
-                            sheet.write(elf_row, elf_col + i + 1, qty if qty else "-", fmt_num)
+                            sheet.write(elf_row, elf_col + i + 1, qty if qty != 0 else "-", fmt_num)
                             total_per_grade[grade] += qty
 
                         cont_value = cont_value_map.get(box, {}).get(desain, 0.0)
                         cont_result = (row_total / cont_value) if cont_value else 0.0
 
-                        sheet.write(elf_row, elf_col + len(grades) + 1, row_total if row_total else "-", fmt_num)
-                        sheet.write(elf_row, elf_col + len(grades) + 2, cont_result if cont_result else "-", fmt_num)
+                        sheet.write(elf_row, elf_col + len(grades) + 1, row_total if row_total != 0 else "-", fmt_num)
+                        sheet.write(elf_row, elf_col + len(grades) + 2, cont_result if cont_result != 0 else "-", fmt_num)
 
                         grand_total_export += row_total
                         cont_total_export += cont_result
@@ -1116,105 +1112,106 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
                 for i, grade in enumerate(grades):
-                    sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade] if total_per_grade[grade] else "-", fmt_num_bold)
+                    sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade] if total_per_grade[grade] != 0 else "-", fmt_num_bold)
 
-                sheet.write(elf_row, elf_col + len(grades) + 1, grand_total_export if grand_total_export else "-", fmt_num_bold)
-                sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export if cont_total_export else "-", fmt_num_bold)
+                sheet.write(elf_row, elf_col + len(grades) + 1, grand_total_export if grand_total_export != 0 else "-", fmt_num_bold)
+                sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export if cont_total_export != 0 else "-", fmt_num_bold)
                 elf_row += 2
 
-            # ================= PRODUCT LOKAL =================
-            sheet.merge_range(elf_row, 12, elf_row, 15, "LOKAL", fmt_label)
-            elf_row += 1
-            sheet.write(elf_row, 12, "DESAIN", fmt_header)
-            sheet.write(elf_row, 13, "BERAT", fmt_header)
-            sheet.write(elf_row, 14, "QTY", fmt_header)
-            sheet.write(elf_row, 15, "TOTAL", fmt_header)
-            elf_row += 1
-            
-            qty_total_local = 0.0
-            grand_total_local = 0.0
+            def get_qty_per_uom(product, warehouse_id, before_date, current_max_date):
+                moves = product.stock_move_ids.filtered(
+                    lambda m: m.state in ('waiting', 'confirmed', 'assigned', 'partially_available')
+                    and m.date and before_date < m.date <= current_max_date
+                    and (
+                        (m.location_id.warehouse_id and m.location_id.warehouse_id.id == warehouse_id)
+                        or (m.location_dest_id.warehouse_id and m.location_dest_id.warehouse_id.id == warehouse_id)
+                    )
+                )
 
-            self._cr.execute(
-                """
-                    SELECT pp.id
-                    FROM product_product pp
-                        JOIN product_template pt ON pt.id = pp.product_tmpl_id
-                        JOIN product_category pc ON pt.categ_id = pc.id
-                    WHERE pt.type = 'consu' AND pc.name IN ('LOKAL') AND pp.active = true
-                    ORDER BY pt.name asc
-                """)
-            local_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
-            
-            stock_qty_local = sum(local.with_context(warehouse_id=warehouse_id, to_date=current_max_date).qty_available or 0.0 for local in local_ids)
-            forecast_qty_local = sum(local.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available or 0.0 for local in local_ids)
-            if (stock_qty_local + forecast_qty_local) > 0:
-                for local in local_ids:
-                    weight_local = local.product_tmpl_id.weight or 0.0
-                    qty_local = local.with_context(warehouse_id=warehouse_id, to_date=current_max_date).qty_available
-                    forecast_local = local.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
-                    total_local = (qty_local + forecast_local) * weight_local
+                uom_data = defaultdict(lambda: {'qty': 0.0, 'weight': 0.0})
 
-                    if (qty_local + forecast_local) > 0:
-                        sheet.write(elf_row, 12, local.name, fmt_text_left)
-                        sheet.write(elf_row, 13, weight_local if weight_local else "-", fmt_num)
-                        sheet.write(elf_row, 14, qty_local + forecast_local if (qty_local + forecast_local) else "-", fmt_num)
-                        sheet.write(elf_row, 15, total_local if total_local else "-", fmt_num)
+                for move in moves:
+                    uom = move.product_uom
+                    is_incoming = move.location_dest_id.usage == 'internal' and move.location_id.usage != 'internal'
+                    is_outgoing = move.location_id.usage == 'internal' and move.location_dest_id.usage != 'internal'
 
-                        qty_total_local += (qty_local + forecast_local)
-                        grand_total_local += total_local
-                        elf_row += 1
-                
+                    if is_incoming:
+                        uom_data[uom]['qty'] += move.product_uom_qty
+                    elif is_outgoing:
+                        uom_data[uom]['qty'] -= move.product_uom_qty
+
+                    uom_data[uom]['weight'] = uom.weight_per_uom_category or 0.0
+
+                return uom_data
+
+
+            def write_category_section(sheet, elf_row, label, category_name, warehouse_id, before_date, current_max_date,
+                            fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold):
+
+                self._cr.execute(
+                    """
+                        SELECT pp.id
+                        FROM product_product pp
+                            JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                            JOIN product_category pc ON pt.categ_id = pc.id
+                        WHERE pt.type = 'consu' AND pc.name IN (%s) AND pp.active = true
+                        ORDER BY pt.name asc
+                    """, (category_name,))
+                product_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
+
+                rows = []
+                qty_total = 0.0
+                grand_total = 0.0
+
+                for product in product_ids:
+                    uom_data = get_qty_per_uom(product, warehouse_id, before_date, current_max_date)
+
+                    for uom in sorted(uom_data.keys(), key=lambda u: u.name):
+                        data = uom_data[uom]
+                        qty = data['qty']
+                        weight = data['weight']
+                        total = qty * weight
+
+                        if qty != 0:
+                            desain_label = f"{product.name} ({uom.name})" if len(uom_data) > 1 else product.name
+                            rows.append((desain_label, weight, qty, total))
+                            qty_total += qty
+                            grand_total += total
+
+                if not rows:
+                    return elf_row
+
+                sheet.merge_range(elf_row, 12, elf_row, 15, label, fmt_label)
+                elf_row += 1
+                sheet.write(elf_row, 12, "DESAIN", fmt_header)
+                sheet.write(elf_row, 13, "BERAT", fmt_header)
+                sheet.write(elf_row, 14, "QTY", fmt_header)
+                sheet.write(elf_row, 15, "TOTAL", fmt_header)
+                elf_row += 1
+
+                for desain_label, weight, qty, total in rows:
+                    sheet.write(elf_row, 12, desain_label, fmt_text_left)
+                    sheet.write(elf_row, 13, weight if weight != 0 else "-", fmt_num)
+                    sheet.write(elf_row, 14, qty if qty != 0 else '-', fmt_num)
+                    sheet.write(elf_row, 15, total if total != 0 else "-", fmt_num)
+                    elf_row += 1
+
                 sheet.merge_range(elf_row, 12, elf_row, 13, "TOTAL", fmt_header)
-                sheet.write(elf_row, 14, qty_total_local if qty_total_local else "-", fmt_num_bold)
-                sheet.write(elf_row, 15, grand_total_local if grand_total_local else "-", fmt_num_bold)
+                sheet.write(elf_row, 14, qty_total if qty_total != 0 else "-", fmt_num_bold)
+                sheet.write(elf_row, 15, grand_total if grand_total != 0 else "-", fmt_num_bold)
                 elf_row += 2
 
-            # ================= PRODUCT FUEL =================
-            sheet.merge_range(elf_row, 12, elf_row, 15, "FUEL", fmt_label)
-            elf_row += 1
-            sheet.write(elf_row, 12, "DESAIN", fmt_header)
-            sheet.write(elf_row, 13, "BERAT", fmt_header)
-            sheet.write(elf_row, 14, "QTY", fmt_header)
-            sheet.write(elf_row, 15, "TOTAL", fmt_header)
-            elf_row += 1
-            
-            qty_total_fuel = 0.0
-            grand_total_fuel = 0.0
+                return elf_row
 
-            self._cr.execute(
-                """
-                    SELECT pp.id
-                    FROM product_product pp
-                        JOIN product_template pt ON pt.id = pp.product_tmpl_id
-                        JOIN product_category pc ON pt.categ_id = pc.id
-                    WHERE pt.type = 'consu' AND pc.name IN ('FUEL') AND pp.active = true
-                    ORDER BY pt.name asc
-                """)
-            fuel_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
-            
-            stock_qty_fuel = sum(fuel.with_context(warehouse_id=warehouse_id, to_date=current_max_date).qty_available or 0.0 for fuel in fuel_ids)
-            forecast_qty_fuel = sum(fuel.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available or 0.0 for fuel in fuel_ids)
-            if (stock_qty_fuel + forecast_qty_fuel) > 0:
-                for fuel in fuel_ids:
-                    weight_fuel = fuel.product_tmpl_id.weight or 0.0
-                    qty_fuel = fuel.with_context(warehouse_id=warehouse_id, to_date=current_max_date).qty_available
-                    forecast_fuel = fuel.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
-                    total_fuel = (qty_fuel + forecast_fuel) * weight_fuel
+            elf_row = write_category_section(
+                sheet, elf_row, "LOKAL", "LOKAL", warehouse_id, before_date, current_max_date,
+                fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
+            )
 
-                    if (qty_fuel + forecast_fuel) > 0:
-                        sheet.write(elf_row, 12, fuel.name, fmt_text_left)
-                        sheet.write(elf_row, 13, weight_fuel if weight_fuel else "-", fmt_num)
-                        sheet.write(elf_row, 14, qty_fuel + forecast_fuel if (qty_fuel + forecast_fuel) else "-", fmt_num)
-                        sheet.write(elf_row, 15, total_fuel if total_fuel else "-", fmt_num)
-
-                        qty_total_fuel += (qty_fuel + forecast_fuel)
-                        grand_total_fuel += total_fuel
-                        elf_row += 1
-                
-                sheet.merge_range(elf_row, 12, elf_row, 13, "TOTAL", fmt_header)
-                sheet.write(elf_row, 14, qty_total_fuel if qty_total_fuel else "-", fmt_num_bold)
-                sheet.write(elf_row, 15, grand_total_fuel if grand_total_fuel else "-", fmt_num_bold)
-                elf_row += 2
+            elf_row = write_category_section(
+                sheet, elf_row, "FUEL", "FUEL", warehouse_id, before_date, current_max_date,
+                fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
+            )
 
         # =========================================================
         # CASE 1 : SINGLE WAREHOUSE
