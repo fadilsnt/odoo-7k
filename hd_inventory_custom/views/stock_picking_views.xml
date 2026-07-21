@@ -39,7 +39,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page name="consume_line_ids" string="Consume Lines" invisible="picking_type_code != 'incoming'">
+                        <page name="consume_line_ids" string="Consume Lines" invisible="picking_type_code == 'incoming'">
                             <field name="consume_line_ids" widget="one2many_search">
                                 <list editable="bottom" create="0" limit="999">
                                     <field name="product_id"/>

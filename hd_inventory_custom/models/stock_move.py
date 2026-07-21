@@ -73,11 +73,12 @@ class StockMove(models.Model):
             product = self.env['product.product'].browse(vals['product_id'])
             vals['name'] = product.display_name
 
-        return super().write(vals)    
+        return super().write(vals)
     
     def _recompute_quantities(self):
         for move in self:
-            if not move._context.get('bypass_move_rule', False):
+            ctx = move._context
+            if not ctx.get('bypass_move_rule', False):
                 continue
 
             total_qty = sum(

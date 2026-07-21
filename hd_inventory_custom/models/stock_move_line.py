@@ -288,14 +288,14 @@ class StockMoveLine(models.Model):
         # RECOMPUTE QTY
         # =================================================
         all_moves = old_moves | self.mapped('move_id')
-        all_moves._recompute_quantities()
+        # all_moves._recompute_quantities()
 
         return res
 
     def unlink(self):
         moves = self.mapped('move_id')
         res = super().unlink()
-        moves._recompute_quantities()
+        # moves._recompute_quantities()
 
         return res
 

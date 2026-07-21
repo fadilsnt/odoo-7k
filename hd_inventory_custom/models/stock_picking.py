@@ -458,6 +458,11 @@ class StockPicking(models.Model):
                 picking.with_context(skip_owner_sync=True).sudo().update({
                     'pemilik_ids': [(6, 0, owners.ids)]
                 })
+            
+        if 'move_line_ids' in vals:
+            for picking in self:
+                for move in picking.move_ids_without_package:
+                    move.with_context(bypass_move_rule=True)._recompute_quantities()
 
         return res
 

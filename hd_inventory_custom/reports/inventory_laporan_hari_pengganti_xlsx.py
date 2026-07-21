@@ -986,9 +986,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             ORDER BY sml.date asc, sml.id
                         """, (warehouse_id, warehouse_id, variant.id, current_min_date, current_max_date, ))
                     move_ids = self.env['stock.move.line'].browse([r[0] for r in self._cr.fetchall()])
-
-                    print ("========",move_ids)
-
                     qty_in = sum(move.quantity for move in move_ids.filtered(lambda m: m.location_dest_id.warehouse_id.id == warehouse_id)) or 0.0
                     qty_out = sum(move.quantity for move in move_ids.filtered(lambda m: m.location_id.warehouse_id.id == warehouse_id)) or 0.0
                     ending_qty = beginning_qty + qty_in - qty_out
