@@ -57,7 +57,7 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
         for move in moves:
             self._sync_move_quantity(move)
         
-        self._sync_picking_consume()
+        self._sync_consume_move()
 
     def _get_or_create_move(self, line, Move):
         move = Move.search([
@@ -146,20 +146,43 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
             vals = self._prepare_move_line_vals(move, line)
             MoveLine.create(vals)
     
-    def _sync_picking_consume(self):
+    # def _sync_picking_consume(self):
+    #     for line in self.consume_line_ids:
+    #         if line.product_id.id not in self.picking_id.consume_line_ids.mapped('product_id').ids:
+    #             self.picking_id.consume_line_ids.create({
+    #                 'picking_id': self.picking_id.id,
+    #                 'product_id': line.product_id.id,
+    #                 'qty': line.qty,
+    #                 'product_uom_id': line.product_uom_id.id,
+    #             })
+    #         else:
+    #             for consume in self.picking_id.consume_line_ids.filtered(lambda l: l.product_id.id == line.product_id.id):
+    #                 consume.write({
+    #                     'qty': line.qty,
+    #                     'product_uom_id': line.product_uom_id.id,
+    #                 })
+
+    def _sync_consume_move(self):
         for line in self.consume_line_ids:
-            if line.product_id.id not in self.picking_id.consume_line_ids.mapped('product_id').ids:
-                self.picking_id.consume_line_ids.create({
-                    'picking_id': self.picking_id.id,
+            if line.product_id.id not in self.picking_id.consume_move_ids.mapped('product_id').ids:
+                scrap_location_id = self.picking_id._get_scrap_location(self.picking_id)
+                self.env['stock.move'].create({
+                    'name': self.picking_id.name + ' - ' + line.product_id.name,
                     'product_id': line.product_id.id,
-                    'qty': line.qty,
-                    'product_uom_id': line.product_uom_id.id,
+                    'product_uom_qty': line.qty,
+                    'quantity': line.qty,
+                    'product_uom': line.product_uom_id.id,
+                    'location_id': self.picking_id.location_dest_id.id,
+                    'location_dest_id': scrap_location_id.id,
+                    'picking_id': self.picking_id.id,
+                    'is_consume': True,
                 })
             else:
-                for consume in self.picking_id.consume_line_ids.filtered(lambda l: l.product_id.id == line.product_id.id):
+                for consume in self.picking_id.consume_move_ids.filtered(lambda l: l.product_id.id == line.product_id.id):
                     consume.write({
-                        'qty': line.qty,
-                        'product_uom_id': line.product_uom_id.id,
+                        'product_uom_qty': line.qty,
+                        'quantity': line.qty,
+                        'product_uom': line.product_uom_id.id,
                     })
     
     def update_consume(self):

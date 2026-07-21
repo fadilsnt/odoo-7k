@@ -269,11 +269,11 @@ class StockPicking(models.Model):
      
         res = super().button_validate()            
 
-        for picking in self:
-            if picking.picking_type_code == 'incoming':
-                picking._validate_picking_consume()
+        ## OLD FUNCTION CONSUME
+        # for picking in self:
+        #     if picking.picking_type_code == 'incoming':
+        #         picking._validate_picking_consume()
 
-            ## OLD FUNCTION CONSUME
             # if self.env['stock.move'].search([
             #     ('picking_id', '=', picking.id),
             #     ('is_consume', '=', True)
@@ -307,27 +307,27 @@ class StockPicking(models.Model):
 
         return res
     
-    def _validate_picking_consume(self):
-        for picking in self:
-            move_ids = self.env['stock.move']
-            scrap_location_id = picking._get_scrap_location(picking)
-            for consume in picking.consume_line_ids:
-                move_ids |= self.env['stock.move'].create({
-                    'name': picking.name + ' - ' + consume.product_id.name,
-                    'product_id': consume.product_id.id,
-                    'product_uom_qty': consume.qty,
-                    'quantity': consume.qty,
-                    'product_uom': consume.product_uom_id.id,
-                    'location_id': picking.location_dest_id.id,
-                    'location_dest_id': scrap_location_id.id,
-                    'picking_id': picking.id,
-                    'is_consume': True,
-                })
+    # def _validate_picking_consume(self):
+    #     for picking in self:
+    #         move_ids = self.env['stock.move']
+    #         scrap_location_id = picking._get_scrap_location(picking)
+    #         for consume in picking.consume_line_ids:
+    #             move_ids |= self.env['stock.move'].create({
+    #                 'name': picking.name + ' - ' + consume.product_id.name,
+    #                 'product_id': consume.product_id.id,
+    #                 'product_uom_qty': consume.qty,
+    #                 'quantity': consume.qty,
+    #                 'product_uom': consume.product_uom_id.id,
+    #                 'location_id': picking.location_dest_id.id,
+    #                 'location_dest_id': scrap_location_id.id,
+    #                 'picking_id': picking.id,
+    #                 'is_consume': True,
+    #             })
             
-            if move_ids:
-                move_ids._action_confirm()
-                move_ids._action_assign()
-                move_ids._action_done()
+    #         if move_ids:
+    #             move_ids._action_confirm()
+    #             move_ids._action_assign()
+    #             move_ids._action_done()
     
     def _get_bulan_romawi(self, bulan):
         romawi = {
