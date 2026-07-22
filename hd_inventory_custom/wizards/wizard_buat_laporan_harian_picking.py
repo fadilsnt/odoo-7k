@@ -166,8 +166,10 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
         for line in self.consume_line_ids:
             if line.product_id.id not in self.picking_id.consume_move_ids.mapped('product_id').ids:
                 scrap_location_id = self.picking_id._get_scrap_location(self.picking_id)
-                self.env['stock.move'].create({
+                move_id = self.env['stock.move'].create({
                     'name': self.picking_id.name + ' - ' + line.product_id.name,
+                    'date': self.picking_id.scheduled_date,
+                    'date_deadline': self.picking_id.date_deadline or self.picking_id.scheduled_date,
                     'product_id': line.product_id.id,
                     'product_uom_qty': line.qty,
                     'quantity': line.qty,
@@ -177,6 +179,11 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
                     'picking_id': self.picking_id.id,
                     'is_consume': True,
                 })
+                for line in move_id.move_line_ids:
+                    line.write({
+                        'date': self.picking_id.scheduled_date,
+                    })
+
             else:
                 for consume in self.picking_id.consume_move_ids.filtered(lambda l: l.product_id.id == line.product_id.id):
                     consume.write({
@@ -184,28 +191,44 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
                         'quantity': line.qty,
                         'product_uom': line.product_uom_id.id,
                     })
+                    for line in consume.move_line_ids:
+                        line.write({
+                            'date': self.picking_id.scheduled_date,
+                        })
     
     def update_consume(self):
         self.ensure_one()
 
+        consume_qty_map = {}
         for line in self.product_line_ids:
             if not line.product_id.consume_product_ids:
                 continue
-            
+
             for product in line.product_id.consume_product_ids:
-                if product.id not in self.consume_line_ids.mapped('product_id').ids:
-                    self.consume_line_ids.create({
-                        'wizard_id': self.id,
-                        'product_id': product.id,
-                        'qty': line.qty,
-                        'product_uom_id': product.uom_id.id,
-                    })
-                else:
-                    for consume in self.consume_line_ids.filtered(lambda l: l.product_id.id == product.id):
-                        consume.write({
-                            'qty': line.qty,
-                        })
-        
+                if product.id not in consume_qty_map:
+                    consume_qty_map[product.id] = {
+                        'qty': 0.0,
+                        'uom_id': product.uom_id.id,
+                    }
+                consume_qty_map[product.id]['qty'] += line.qty
+
+        existing_product_ids = self.consume_line_ids.mapped('product_id').ids
+        for product_id, vals in consume_qty_map.items():
+            if product_id not in existing_product_ids:
+                self.consume_line_ids.create({
+                    'wizard_id': self.id,
+                    'product_id': product_id,
+                    'qty': vals['qty'],
+                    'product_uom_id': vals['uom_id'],
+                })
+            else:
+                consume_line = self.consume_line_ids.filtered(
+                    lambda l: l.product_id.id == product_id
+                )
+                consume_line.write({
+                    'qty': vals['qty'],
+                })
+
         return self._reopen()
 
     def _reopen(self):
