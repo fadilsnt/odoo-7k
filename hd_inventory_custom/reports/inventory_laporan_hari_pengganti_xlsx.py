@@ -473,6 +473,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             fmt_text_center = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter'})
             fmt_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
             fmt_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
+            fmt_cont_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'bold': True})
@@ -1100,7 +1101,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                         cont_result = (row_total / cont_value) if cont_value else 0.0
 
                         sheet.write(elf_row, elf_col + len(grades) + 1, row_total if row_total != 0 else "-", fmt_num)
-                        sheet.write(elf_row, elf_col + len(grades) + 2, cont_result if cont_result != 0 else "-", fmt_num)
+                        sheet.write(elf_row, elf_col + len(grades) + 2, cont_result if cont_result != 0 else "-", fmt_cont_bold)
 
                         grand_total_export += row_total
                         cont_total_export += cont_result
@@ -1111,7 +1112,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade] if total_per_grade[grade] != 0 else "-", fmt_num_bold)
 
                 sheet.write(elf_row, elf_col + len(grades) + 1, grand_total_export if grand_total_export != 0 else "-", fmt_num_bold)
-                sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export if cont_total_export != 0 else "-", fmt_num_bold)
+                sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
                 elf_row += 2
 
             def get_qty_per_uom(product, warehouse_id, current_max_date):
