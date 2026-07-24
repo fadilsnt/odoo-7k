@@ -26,6 +26,14 @@ class StockPicking(models.Model):
     origin_picking_id = fields.Many2one('stock.picking', string="Origin Pickings")
     consume_line_ids = fields.One2many('stock.picking.consume', 'picking_id', string='Consume Lines')
 
+    ## Override
+    def _set_scheduled_date(self):
+        super()._set_scheduled_date()
+        for picking in self:
+            if picking.state in ('done', 'cancel'):
+                continue
+            picking.sudo().move_ids.move_line_ids.write({'date': picking.scheduled_date})
+
     def _compute_return_count(self):
         for rec in self:
             rec.return_count = self.env['stock.picking'].search_count([('origin_picking_id', '=', rec.id)])    

@@ -982,7 +982,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                                 JOIN stock_location src ON src.id = sml.location_id
                                 JOIN stock_location dst ON dst.id = sml.location_dest_id
                             WHERE (src.warehouse_id=%s OR dst.warehouse_id=%s) AND
-                                sml.product_id = %s AND sml.date BETWEEN %s AND %s AND sml.state in ('waiting', 'confirmed', 'assigned', 'partially_available')
+                                sml.product_id = %s AND sml.date BETWEEN %s AND %s AND sml.state NOT IN ('draft', 'cancel')
                             ORDER BY sml.date asc, sml.id
                         """, (warehouse_id, warehouse_id, variant.id, current_min_date, current_max_date, ))
                     move_ids = self.env['stock.move.line'].browse([r[0] for r in self._cr.fetchall()])
@@ -1042,9 +1042,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 if box not in box_weight_map:
                     box_weight_map[box] = box_ptav.product_attribute_value_id.weight_per_product_attribute or 0.0
 
-                forecast_before_qty = variant.with_context(warehouse_id=warehouse_id, to_date=before_date).virtual_available
-                forecast_current_qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
-                export_data[box][desain][grade] += (forecast_current_qty - forecast_before_qty)
+                forecast_qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
+                export_data[box][desain][grade] += forecast_qty
 
                 if cont:
                     try:
@@ -1115,10 +1114,10 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export if cont_total_export != 0 else "-", fmt_num_bold)
                 elf_row += 2
 
-            def get_qty_per_uom(product, warehouse_id, before_date, current_max_date):
+            def get_qty_per_uom(product, warehouse_id, current_max_date):
                 moves = product.stock_move_ids.filtered(
-                    lambda m: m.state in ('waiting', 'confirmed', 'assigned', 'partially_available')
-                    and m.date and before_date < m.date <= current_max_date
+                    lambda m: m.state not in ('draft', 'cancel')
+                    and m.date and m.date <= current_max_date
                     and (
                         (m.location_id.warehouse_id and m.location_id.warehouse_id.id == warehouse_id)
                         or (m.location_dest_id.warehouse_id and m.location_dest_id.warehouse_id.id == warehouse_id)
@@ -1142,7 +1141,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 return uom_data
 
 
-            def write_category_section(sheet, elf_row, label, category_name, warehouse_id, before_date, current_max_date,
+            def write_category_section(sheet, elf_row, label, category_name, warehouse_id, current_max_date,
                             fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold):
 
                 self._cr.execute(
@@ -1161,7 +1160,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 grand_total = 0.0
 
                 for product in product_ids:
-                    uom_data = get_qty_per_uom(product, warehouse_id, before_date, current_max_date)
+                    uom_data = get_qty_per_uom(product, warehouse_id, current_max_date)
 
                     for uom in sorted(uom_data.keys(), key=lambda u: u.name):
                         data = uom_data[uom]
@@ -1201,12 +1200,12 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 return elf_row
 
             elf_row = write_category_section(
-                sheet, elf_row, "LOKAL", "LOKAL", warehouse_id, before_date, current_max_date,
+                sheet, elf_row, "LOKAL", "LOKAL", warehouse_id, current_max_date,
                 fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
             )
 
             elf_row = write_category_section(
-                sheet, elf_row, "FUEL", "FUEL", warehouse_id, before_date, current_max_date,
+                sheet, elf_row, "FUEL", "FUEL", warehouse_id, current_max_date,
                 fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
             )
 
