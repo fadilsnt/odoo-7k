@@ -965,12 +965,12 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                         JOIN product_category pc ON pt.categ_id = pc.id
                         JOIN uom_uom uom ON uom.id = pt.uom_id
                     WHERE pt.type = 'consu' AND ({where_path}) AND pp.active = true
-                    ORDER BY uom.name asc, pt.name asc
+                    ORDER BY pc.name asc, pt.name asc
                 """,
                 tuple(path_params)
             )
             variant_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
-            for uom, variants_group in groupby(variant_ids, key=lambda v: v.uom_id):
+            for categ, variants_group in groupby(variant_ids, key=lambda v: v.categ_id):
                 sum_row = bp_row
                 total_row = 0
                 sum_ending = 0.0

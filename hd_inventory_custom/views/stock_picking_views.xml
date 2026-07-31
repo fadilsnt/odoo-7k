@@ -45,9 +45,10 @@
                                     <field name="name"/>
                                     <field name="product_id"/>
                                     <field name="product_uom" optional="show"/>
-                                    <field name="product_uom_qty"/>
                                     <field name="location_id" optional="hide"/>
                                     <field name="location_dest_id" optional="hide"/>
+                                    <field name="product_uom_qty" force_save="1"/>
+                                    <field name="quantity" force_save="1" column_invisible="1"/>
                                     <field name="is_consume" optional="hide"/>
                                     <field name="state" optional="hide"/>
                                 </list>

@@ -187,8 +187,8 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
             else:
                 for consume in self.picking_id.consume_move_ids.filtered(lambda l: l.product_id.id == line.product_id.id):
                     consume.write({
-                        'product_uom_qty': line.qty,
-                        'quantity': line.qty,
+                        'product_uom_qty': line.product_uom_qty + line.qty,
+                        'quantity': line.product_uom_qty + line.qty,
                         'product_uom': line.product_uom_id.id,
                     })
                     for line in consume.move_line_ids:

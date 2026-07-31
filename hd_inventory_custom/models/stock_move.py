@@ -72,6 +72,13 @@ class StockMove(models.Model):
         if vals.get('product_id') and not vals.get('name'):
             product = self.env['product.product'].browse(vals['product_id'])
             vals['name'] = product.display_name
+        
+        for line in self.filtered(lambda l: l.is_consume):
+            if vals.get('product_uom_qty') and not vals.get('quantity'):
+                vals['quantity'] = vals['product_uom_qty']
+            
+            if vals.get('quantity') and not vals.get('product_uom_qty'):
+                vals['product_uom_qty'] = vals['quantity']
 
         return super().write(vals)
     
