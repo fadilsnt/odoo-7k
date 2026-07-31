@@ -30,6 +30,13 @@
                     <group>
                         <group>
                             <field name="date"/>
+                            <label for="grade_value_ids" string="Average"/>
+                            <div class="o_row">
+                                <field name="grade_value_ids" widget="many2many_tags"/>
+                                <span class="oe_inline">  </span>
+                                <field name="is_kotak"/>
+                                <span class="oe_inline">KOTAK</span>
+                            </div>
                         </group>
                         <group>
                             <field name="warehouse_id"/>

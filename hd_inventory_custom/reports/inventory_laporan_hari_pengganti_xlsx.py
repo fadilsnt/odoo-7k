@@ -433,6 +433,11 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
         report_date = data.get('date')
         warehouse_id = data.get('warehouse_id')
 
+        grade_value_ids = data.get('grade_value_ids') or []
+        grade_records = self.env['product.attribute.value'].browse(grade_value_ids)
+        grade_names = [rec.name for rec in grade_records if rec.exists()]
+        is_kotak = bool(data.get('is_kotak'))
+
         # === NORMALISASI WAREHOUSE ===
         warehouse = None
         if warehouse_id:
@@ -463,7 +468,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
         # =========================================================
         # RENDER SHEET
         # =========================================================
-        def _render_sheet(sheet, warehouse_name, ovens, total_per_grade=None):
+        def _render_sheet(sheet, warehouse_name, ovens, total_per_grade=None, grade_names=None, is_kotak=False):
             # ================= FORMATS =================
             fmt_header = workbook.add_format({'border': 1, 'bold': True, 'align': 'center', 'valign': 'vcenter'})
             fmt_label = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
@@ -475,6 +480,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             fmt_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
             fmt_cont_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter'})
+            fmt_total_center = workbook.add_format({'border': 1, 'bold': True, 'align': 'center', 'valign': 'vcenter'})
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'bold': True})
 
@@ -494,6 +500,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             warehouse_end_col = int((total_cols - 1) * 0.7)
             date_start_col = min(warehouse_end_col + 1, last_col)
 
+            grade_col_start = last_col + 1
+
             sheet.merge_range(0, 0, 0, warehouse_end_col, f"Gudang {warehouse_name}", fmt_label)
             if date_start_col == last_col:
                 sheet.write(0, last_col, f"TANGGAL : {date_today}", fmt_label)
@@ -508,6 +516,66 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             for oven in oven_list:
                 sheet.merge_range(header_row, col, header_row, col + 1, oven, fmt_header)
                 col += 2
+            
+            # ================= RATA-RATA / KOTAK =================
+            if grade_names:
+                rata_col_label = grade_col_start
+                rata_col_value = grade_col_start + 1
+                rata_col_kotak = grade_col_start + 2
+
+                sheet.merge_range(header_row, rata_col_label, header_row, rata_col_value, "RATA - RATA", fmt_header)
+                if is_kotak:
+                    sheet.write(header_row, rata_col_kotak, "KOTAK", fmt_header)
+
+                rata_row = header_row + 1
+                avg_values = []
+                kotak_values = []
+
+                for grade_name in grade_names:
+                    avg_sum = 0.0
+                    kotak_sum = 0.0
+
+                    for o in ovens:
+                        classification = o.get("classification") or "UNCLASSIFIED"
+                        grade_key = classification.split(' (')[0].strip()
+
+                        if grade_key != grade_name:
+                            continue
+
+                        for p in o.get("products", []):
+                            product_name = (p.get("product") or "").strip()
+                            qty = p.get("qty", 0) or 0
+
+                            if product_name.lower().startswith("kotak"):
+                                kotak_sum += qty
+                            else:
+                                avg_sum += qty
+
+                    sheet.write(rata_row, rata_col_label, grade_name, fmt_text_center)
+
+                    if avg_sum:
+                        sheet.write(rata_row, rata_col_value, fmt_qty(avg_sum), fmt_number)
+                        avg_values.append(avg_sum)
+                    else:
+                        sheet.write(rata_row, rata_col_value, "-", fmt_number)
+
+                    if is_kotak:
+                        if kotak_sum:
+                            sheet.write(rata_row, rata_col_kotak, fmt_qty(kotak_sum), fmt_number)
+                            kotak_values.append(kotak_sum)
+                        else:
+                            sheet.write(rata_row, rata_col_kotak, "-", fmt_number)
+
+                    rata_row += 1
+
+                total_avg = round(sum(avg_values) / len(avg_values), 2) if avg_values else 0.0
+                total_avg_str = f"{total_avg:.2f}".replace('.', ',')
+                total_kotak = sum(kotak_values) if kotak_values else 0
+
+                sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", fmt_header)
+                sheet.write(rata_row, rata_col_value, total_avg_str, fmt_total_center)
+                if is_kotak:
+                    sheet.write(rata_row, rata_col_kotak, fmt_qty(total_kotak) if total_kotak else "-", fmt_total_center)
 
             # ================= MAP DATA =================
             data_map = {}
@@ -928,11 +996,13 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             if repack_data:
                 bongkar, menjadi = repack_data[0]
 
-                sheet.merge_range(footer_row, 0, footer_row, last_col, bongkar)
-                footer_row += 1
+                if bongkar != "BONGKAR: -":
+                    sheet.merge_range(footer_row, 0, footer_row, last_col, bongkar)
+                    footer_row += 1
 
-                sheet.merge_range(footer_row, 0, footer_row, last_col, menjadi)
-                footer_row += 1
+                if menjadi != "MENJADI: -":
+                    sheet.merge_range(footer_row, 0, footer_row, last_col, menjadi)
+                    footer_row += 1
             
             bp_row = footer_row + 2
             # ================= BAHAN PACKING =================
@@ -1052,8 +1122,14 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     except ValueError:
                         cont_value_map[box][desain] = 0.0
 
+            first_box = False
+            first_box_row = elf_row
+            first_box_col = elf_col
+            cont_total_box_8_10_kg = 0.0
+
             sorted_boxes = sorted(export_data.keys(), key=lambda b: box_weight_map.get(b, 0.0))
             for box in sorted_boxes:
+
                 desain_dict = export_data[box]
                 
                 grade_totals = defaultdict(float)
@@ -1073,6 +1149,14 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 if not valid_box:
                     continue
+                
+                if not first_box:
+                    first_box = True
+                    first_box_col += len(grades) + 4
+                
+                is_box_8_10_kg = False
+                if box_weight_map.get(box, 0.0) >= 8.0 and box_weight_map.get(box, 0.0) <= 10.0 or '8 kg' in box.lower() or '8kg' in box.lower() or '10 kg' in box.lower() or '10kg' in box.lower():
+                    is_box_8_10_kg = True
 
                 sheet.merge_range(elf_row, elf_col, elf_row, elf_col + len(grades) + 2, box, fmt_header)
                 elf_row += 1
@@ -1085,6 +1169,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 elf_row += 1
 
                 total_per_grade = defaultdict(float)
+                cont_per_grade = defaultdict(float)
                 grand_total_export = 0.0
                 cont_total_export = 0.0
 
@@ -1096,6 +1181,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             qty = grade_qty.get(grade, 0.0)
                             sheet.write(elf_row, elf_col + i + 1, qty if qty != 0 else "-", fmt_num)
                             total_per_grade[grade] += qty
+                            cont_rate = cont_value_map.get(box, {}).get(desain, 0.0)
+                            cont_per_grade[grade] += (qty / cont_rate) if cont_rate and qty else 0.0
 
                         cont_value = cont_value_map.get(box, {}).get(desain, 0.0)
                         cont_result = (row_total / cont_value) if cont_value else 0.0
@@ -1107,13 +1194,24 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                         cont_total_export += cont_result
                         elf_row += 1
 
-                sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
+                # sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
+                # sheet.write(elf_row + 1, elf_col, "CONT", fmt_header)
                 for i, grade in enumerate(grades):
                     sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade] if total_per_grade[grade] != 0 else "-", fmt_num_bold)
-
+                    sheet.write(elf_row + 1, elf_col + i + 1, cont_per_grade[grade] if cont_per_grade[grade] != 0 else "-", fmt_cont_bold)
+                
+                sheet.write(elf_row + 1, elf_col + len(grades) + 1, cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
                 sheet.write(elf_row, elf_col + len(grades) + 1, grand_total_export if grand_total_export != 0 else "-", fmt_num_bold)
-                sheet.write(elf_row, elf_col + len(grades) + 2, cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
-                elf_row += 2
+                sheet.merge_range(elf_row, elf_col + len(grades) + 2, elf_row + 1, elf_col + len(grades) + 2, cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
+                elf_row += 3
+
+                if is_box_8_10_kg:
+                    cont_total_box_8_10_kg += cont_total_export
+            
+            if first_box:
+                sheet.merge_range(first_box_row, first_box_col, first_box_row, first_box_col + 1, "TOTAL BOX 10 KG & 8 KG", fmt_header)
+                sheet.write(first_box_row + 1, first_box_col, "CONT", fmt_header)
+                sheet.write(first_box_row + 1, first_box_col + 1, cont_total_box_8_10_kg if cont_total_box_8_10_kg != 0 else "-", fmt_cont_bold)
 
             def get_qty_per_uom(product, warehouse_id, current_max_date):
                 moves = product.stock_move_ids.filtered(
@@ -1218,7 +1316,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             ovens = data_report.get(wh_name, {}).get("ovens", [])
             total_per_grade = data_report.get(wh_name, {}).get("total_per_grade")
             sheet = workbook.add_worksheet(wh_name[:31])
-            _render_sheet(sheet, wh_name, ovens, total_per_grade=total_per_grade)
+            _render_sheet(sheet, wh_name, ovens, total_per_grade=total_per_grade,
+                                      grade_names=grade_names, is_kotak=is_kotak)
 
         # =========================================================
         # CASE 2 : ALL WAREHOUSE
@@ -1228,4 +1327,5 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 ovens = wh_data.get("ovens", [])
                 total_per_grade = wh_data.get("total_per_grade")
                 sheet = workbook.add_worksheet(wh_name[:31])
-                _render_sheet(sheet, wh_name, ovens, total_per_grade=total_per_grade)
+                _render_sheet(sheet, wh_name, ovens, total_per_grade=total_per_grade,
+                                              grade_names=grade_names, is_kotak=is_kotak)
