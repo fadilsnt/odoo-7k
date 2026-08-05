@@ -478,11 +478,19 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             fmt_text_center = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter'})
             fmt_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
             fmt_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
+            fmt_other_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
+            fmt_other_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_cont_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter'})
             fmt_total_center = workbook.add_format({'border': 1, 'bold': True, 'align': 'center', 'valign': 'vcenter'})
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'bold': True})
+
+            # FORMAT TABLE AVERAGE
+            avg_header = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
+            avg_content = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+            avg_number = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+            fmt_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
 
             # ================= OVEN LIST =================
             oven_list = []
@@ -523,9 +531,9 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 rata_col_value = grade_col_start + 1
                 rata_col_kotak = grade_col_start + 2
 
-                sheet.merge_range(header_row, rata_col_label, header_row, rata_col_value, "RATA - RATA", fmt_header)
+                sheet.merge_range(header_row, rata_col_label, header_row, rata_col_value, "RATA - RATA", avg_header)
                 if is_kotak:
-                    sheet.write(header_row, rata_col_kotak, "KOTAK", fmt_header)
+                    sheet.write(header_row, rata_col_kotak, "KOTAK", avg_header)
 
                 rata_row = header_row + 1
                 avg_values = []
@@ -551,20 +559,20 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             else:
                                 avg_sum += qty
 
-                    sheet.write(rata_row, rata_col_label, grade_name, fmt_text_center)
+                    sheet.write(rata_row, rata_col_label, grade_name, avg_content)
 
                     if avg_sum:
-                        sheet.write(rata_row, rata_col_value, fmt_qty(avg_sum), fmt_number)
+                        sheet.write(rata_row, rata_col_value, fmt_qty(avg_sum), avg_number)
                         avg_values.append(avg_sum)
                     else:
-                        sheet.write(rata_row, rata_col_value, "-", fmt_number)
+                        sheet.write(rata_row, rata_col_value, "-", avg_number)
 
                     if is_kotak:
                         if kotak_sum:
-                            sheet.write(rata_row, rata_col_kotak, fmt_qty(kotak_sum), fmt_number)
+                            sheet.write(rata_row, rata_col_kotak, fmt_qty(kotak_sum), avg_number)
                             kotak_values.append(kotak_sum)
                         else:
-                            sheet.write(rata_row, rata_col_kotak, "-", fmt_number)
+                            sheet.write(rata_row, rata_col_kotak, "-", avg_number)
 
                     rata_row += 1
 
@@ -572,10 +580,10 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 total_avg_str = f"{total_avg:.2f}".replace('.', ',')
                 total_kotak = sum(kotak_values) if kotak_values else 0
 
-                sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", fmt_header)
-                sheet.write(rata_row, rata_col_value, total_avg_str, fmt_total_center)
+                sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_header)
+                sheet.write(rata_row, rata_col_value, total_avg_str, fmt_total)
                 if is_kotak:
-                    sheet.write(rata_row, rata_col_kotak, fmt_qty(total_kotak) if total_kotak else "-", fmt_total_center)
+                    sheet.write(rata_row, rata_col_kotak, fmt_qty(total_kotak) if total_kotak else "-", fmt_total)
 
             # ================= MAP DATA =================
             data_map = {}
@@ -1005,6 +1013,14 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     footer_row += 1
             
             bp_row = footer_row + 2
+            def _is_categ_lainnya(categ):
+                while categ:
+                    if "lainnya" in (categ.name or "").strip().lower():
+                        return True
+                    
+                    categ = categ.parent_id
+                return False
+
             # ================= BAHAN PACKING =================
             sheet.merge_range(bp_row, 0, bp_row, 10, "BAHAN PACKING", fmt_label)
             bp_row += 1
@@ -1041,6 +1057,13 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             )
             variant_ids = self.env['product.product'].browse([r[0] for r in self._cr.fetchall()])
             for categ, variants_group in groupby(variant_ids, key=lambda v: v.categ_id):
+                fm_pack_qty = fmt_num
+                fm_pack_total = fmt_num_bold
+                is_categ_lainnya = _is_categ_lainnya(categ)
+                if is_categ_lainnya:
+                    fm_pack_qty = fmt_other_num
+                    fm_pack_total = fmt_other_num_bold
+
                 sum_row = bp_row
                 total_row = 0
                 sum_ending = 0.0
@@ -1063,17 +1086,17 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                     if beginning_qty != 0 or ending_qty != 0:
                         sheet.write(bp_row, 0, variant.name, fmt_text_left)
-                        sheet.merge_range(bp_row, 1, bp_row, 2, beginning_qty if beginning_qty else "-", fmt_num)
-                        sheet.merge_range(bp_row, 3, bp_row, 4, qty_in if qty_in else "-", fmt_num)
-                        sheet.merge_range(bp_row, 5, bp_row, 6, qty_out if qty_out else "-", fmt_num)
-                        sheet.merge_range(bp_row, 7, bp_row, 8, ending_qty if ending_qty else "-", fmt_num)
+                        sheet.merge_range(bp_row, 1, bp_row, 2, beginning_qty if beginning_qty else "-", fm_pack_qty)
+                        sheet.merge_range(bp_row, 3, bp_row, 4, qty_in if qty_in else "-", fm_pack_qty)
+                        sheet.merge_range(bp_row, 5, bp_row, 6, qty_out if qty_out else "-", fm_pack_qty)
+                        sheet.merge_range(bp_row, 7, bp_row, 8, ending_qty if ending_qty else "-", fm_pack_qty)
 
                         bp_row += 1
                         total_row += 1
                         sum_ending += ending_qty
 
                 if total_row != 0:
-                    sheet.merge_range(sum_row, 9, sum_row + (total_row - 1 if total_row > 0 else 0), 10, sum_ending if sum_ending != 0 else "-", fmt_num_bold)
+                    sheet.merge_range(sum_row, 9, sum_row + (total_row - 1 if total_row > 0 else 0), 10, sum_ending if sum_ending != 0 else "-", fm_pack_total)
 
             # ================= PRODUCT EXPORT =================
             elf_row = footer_row + 2

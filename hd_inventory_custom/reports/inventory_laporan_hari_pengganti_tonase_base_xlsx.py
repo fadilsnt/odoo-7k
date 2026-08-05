@@ -465,6 +465,12 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'bold': True})
 
+            # FORMAT TABLE AVERAGE
+            avg_header = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
+            avg_content = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+            avg_number = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+            fmt_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
+
             # ================= OVEN LIST =================
             oven_list = []
 
@@ -504,9 +510,9 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 rata_col_value = grade_col_start + 1
                 rata_col_kotak = grade_col_start + 2
 
-                sheet.merge_range(header_row, rata_col_label, header_row, rata_col_value, "RATA - RATA", fmt_header)
+                sheet.merge_range(header_row, rata_col_label, header_row, rata_col_value, "RATA - RATA", avg_header)
                 if is_kotak:
-                    sheet.write(header_row, rata_col_kotak, "KOTAK", fmt_header)
+                    sheet.write(header_row, rata_col_kotak, "KOTAK", avg_header)
 
                 rata_row = header_row + 1
                 avg_values = []
@@ -532,20 +538,20 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             else:
                                 avg_sum += qty
 
-                    sheet.write(rata_row, rata_col_label, grade_name, fmt_text_center)
+                    sheet.write(rata_row, rata_col_label, grade_name, avg_content)
 
                     if avg_sum:
-                        sheet.write(rata_row, rata_col_value, fmt_qty(avg_sum), fmt_number)
+                        sheet.write(rata_row, rata_col_value, fmt_qty(avg_sum), avg_number)
                         avg_values.append(avg_sum)
                     else:
-                        sheet.write(rata_row, rata_col_value, "-", fmt_number)
+                        sheet.write(rata_row, rata_col_value, "-", avg_number)
 
                     if is_kotak:
                         if kotak_sum:
-                            sheet.write(rata_row, rata_col_kotak, fmt_qty(kotak_sum), fmt_number)
+                            sheet.write(rata_row, rata_col_kotak, fmt_qty(kotak_sum), avg_number)
                             kotak_values.append(kotak_sum)
                         else:
-                            sheet.write(rata_row, rata_col_kotak, "-", fmt_number)
+                            sheet.write(rata_row, rata_col_kotak, "-", avg_number)
 
                     rata_row += 1
 
@@ -553,10 +559,10 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 total_avg_str = f"{total_avg:.2f}".replace('.', ',')
                 total_kotak = sum(kotak_values) if kotak_values else 0
 
-                sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", fmt_header)
-                sheet.write(rata_row, rata_col_value, total_avg_str, fmt_total_center)
+                sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_header)
+                sheet.write(rata_row, rata_col_value, total_avg_str, fmt_total)
                 if is_kotak:
-                    sheet.write(rata_row, rata_col_kotak, fmt_qty(total_kotak) if total_kotak else "-", fmt_total_center)
+                    sheet.write(rata_row, rata_col_kotak, fmt_qty(total_kotak) if total_kotak else "-", fmt_total)
 
             # ================= MAP DATA =================
             data_map = {}
