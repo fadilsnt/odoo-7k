@@ -135,6 +135,11 @@ class StockOpnameWizard(models.TransientModel):
                     
                     first_variant = 1
                     for variant in product.product_variant_ids:
+                        variant_name = variant.name
+                        attribute_values = variant.product_template_attribute_value_ids.filtered(lambda v: 'grade' in v.attribute_id.name.lower())
+                        if attribute_values:
+                            variant_name += f" ({', '.join(attribute_values.mapped('name'))})"
+
                         before_qty = variant.with_context(warehouse_id=self.warehouse_id.id, to_date=before_date).qty_available
                         current_qty = variant.with_context(warehouse_id=self.warehouse_id.id, to_date=current_date).qty_available
                         diff_qty = current_qty - before_qty
@@ -156,7 +161,7 @@ class StockOpnameWizard(models.TransientModel):
                         
                         if before_qty != 0 or current_qty != 0:
                             worksheet1.write(i, 0, product_number if first_variant == 1 else '', content_center_format)
-                            worksheet1.merge_range(i, 1, i, 2, variant.display_name, content_left_format)
+                            worksheet1.merge_range(i, 1, i, 2, variant_name, content_left_format)
                             worksheet1.write(i, 3, before_qty if before_qty else '-', content_numb_format)
                             worksheet1.write(i, 4, current_qty if current_qty else '-', content_numb_format)
                             worksheet1.write(i, 5, diff_qty if diff_qty else '-', content_numb_format)
