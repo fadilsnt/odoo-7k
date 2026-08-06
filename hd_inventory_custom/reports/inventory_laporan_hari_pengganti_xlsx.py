@@ -490,7 +490,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             avg_header = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
             avg_content = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
             avg_number = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
-            fmt_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
+            avg_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
 
             # ================= OVEN LIST =================
             oven_list = []
@@ -581,9 +581,9 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 total_kotak = sum(kotak_values) if kotak_values else 0
 
                 sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_header)
-                sheet.write(rata_row, rata_col_value, total_avg_str, fmt_total)
+                sheet.write(rata_row, rata_col_value, total_avg_str, avg_total)
                 if is_kotak:
-                    sheet.write(rata_row, rata_col_kotak, fmt_qty(total_kotak) if total_kotak else "-", fmt_total)
+                    sheet.write(rata_row, rata_col_kotak, fmt_qty(total_kotak) if total_kotak else "-", avg_total)
 
             # ================= MAP DATA =================
             data_map = {}
