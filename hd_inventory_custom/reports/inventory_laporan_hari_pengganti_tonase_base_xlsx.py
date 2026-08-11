@@ -519,8 +519,8 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 kotak_values = []
 
                 for grade_name in grade_names:
-                    avg_sum = 0.0
-                    kotak_sum = 0.0
+                    avg_sum = []
+                    kotak_sum = []
 
                     for o in ovens:
                         classification = o.get("classification") or "UNCLASSIFIED"
@@ -534,35 +534,34 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                             qty = p.get("qty", 0) or 0
 
                             if product_name.lower().startswith("kotak"):
-                                kotak_sum += qty
+                                kotak_sum.append(qty)
                             else:
-                                avg_sum += qty
+                                avg_sum.append(qty)
 
                     sheet.write(rata_row, rata_col_label, grade_name, avg_content)
 
                     if avg_sum:
-                        sheet.write(rata_row, rata_col_value, fmt_qty(avg_sum), avg_number)
-                        avg_values.append(avg_sum)
+                        sheet.write(rata_row, rata_col_value, round(sum(avg_sum) / len(avg_sum), 2), avg_number)
+                        avg_values.append(round(sum(avg_sum) / len(avg_sum), 2))
                     else:
                         sheet.write(rata_row, rata_col_value, "-", avg_number)
 
                     if is_kotak:
                         if kotak_sum:
-                            sheet.write(rata_row, rata_col_kotak, fmt_qty(kotak_sum), avg_number)
-                            kotak_values.append(kotak_sum)
+                            sheet.write(rata_row, rata_col_kotak, round(sum(kotak_sum) / len(kotak_sum), 2), avg_number)
+                            kotak_values.append(round(sum(kotak_sum) / len(kotak_sum), 2))
                         else:
                             sheet.write(rata_row, rata_col_kotak, "-", avg_number)
 
                     rata_row += 1
-
+                
                 total_avg = round(sum(avg_values) / len(avg_values), 2) if avg_values else 0.0
-                total_avg_str = f"{total_avg:.2f}".replace('.', ',')
-                total_kotak = sum(kotak_values) if kotak_values else 0
+                total_kotak = round(sum(kotak_values) / len(kotak_values), 2) if kotak_values else 0.0
 
                 sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_header)
-                sheet.write(rata_row, rata_col_value, total_avg_str, avg_total)
+                sheet.write(rata_row, rata_col_value, total_avg if total_avg else "-", avg_total)
                 if is_kotak:
-                    sheet.write(rata_row, rata_col_kotak, fmt_qty(total_kotak) if total_kotak else "-", avg_total)
+                    sheet.write(rata_row, rata_col_kotak, total_kotak if total_kotak else "-", avg_total)
 
             # ================= MAP DATA =================
             data_map = {}
