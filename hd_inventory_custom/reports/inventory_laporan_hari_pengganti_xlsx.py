@@ -577,8 +577,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                     rata_row += 1
 
-                total_avg = round(sum(avg_values) / len(avg_values), 2) if avg_values else 0.0
-                total_kotak = round(sum(kotak_values) / len(kotak_values), 2) if kotak_values else 0.0
+                total_avg = round(sum(avg_values), 2) if avg_values else 0.0
+                total_kotak = round(sum(kotak_values), 2) if kotak_values else 0.0
 
                 sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_header)
                 sheet.write(rata_row, rata_col_value, total_avg if total_avg else "-", avg_total)
@@ -1140,7 +1140,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 cont_ptav = get_attr_ptav(variant, 'CONT')
 
                 box = box_ptav.name or 'TANPA BOX'
-                grade = grade_ptav.name or ''
+                grade = grade_ptav.name or 'FUEL'
                 cont = cont_ptav.name
                 desain = variant.product_tmpl_id.name
 
@@ -1148,6 +1148,18 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     box_weight_map[box] = box_ptav.product_attribute_value_id.weight_per_product_attribute or 0.0
 
                 forecast_qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
+                if grade == 'FUEL' or variant.categ_id.name == 'FUEL':
+                    self._cr.execute(
+                        """
+                            SELECT SUM(
+                                CASE WHEN dl.warehouse_id = %s THEN sml.quantity ELSE -sml.quantity END
+                            ) FROM stock_move_line sml
+                                JOIN stock_location sl ON sl.id = sml.location_id
+                                JOIN stock_location dl ON dl.id = sml.location_dest_id
+                            WHERE (sl.warehouse_id=%s OR dl.warehouse_id=%s) AND sml.product_id = %s AND sml.date<=%s AND sml.state NOT IN ('draft', 'cancel')
+                        """, (warehouse_id, warehouse_id, warehouse_id, variant.id, current_max_date, ))
+                    forecast_qty = self._cr.fetchone()[0] or 0.0
+
                 export_data[box][desain][grade] += forecast_qty
 
                 if cont:
@@ -1172,7 +1184,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                         grade_totals[grade] += qty
 
                 # grades = sorted(g for g, total in grade_totals.items() if total != 0)
-                grades = sorted((g for g, total in grade_totals.items() if total != 0), key=lambda g: (g == '', g))
+                grades = sorted((g for g, total in grade_totals.items() if total != 0), key=lambda g: (g == 'FUEL', g))
                 if not grades:
                     continue
 

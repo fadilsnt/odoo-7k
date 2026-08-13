@@ -135,7 +135,8 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     bm.pembakar_penutup,
                     bm.lubang_setom,
                     bm.bongkaran,
-                    bm.asumsi_berat_ikat,                    
+                    bm.asumsi_berat_ikat, 
+                    bm.product_id,                   
                     pt.name->>'id_ID' AS product,
                     pt.is_cl AS is_cl,
                     pc.name AS product_category,
@@ -174,11 +175,12 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     bm.pembakar_penutup,
                     bm.lubang_setom,
                     bm.bongkaran,
-                    bm.asumsi_berat_ikat,                    
+                    bm.asumsi_berat_ikat,    
+                    bm.product_id,                
                     pt.name->>'id_ID',
                     pt.is_cl,
                     pc.name,
-                    uu.name,
+                    uu.name->>'id_ID',
                     uu.weight_per_uom_category,
                     bm.qty,
                     bm.tonase
@@ -555,8 +557,8 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                     rata_row += 1
                 
-                total_avg = round(sum(avg_values) / len(avg_values), 2) if avg_values else 0.0
-                total_kotak = round(sum(kotak_values) / len(kotak_values), 2) if kotak_values else 0.0
+                total_avg = round(sum(avg_values), 2) if avg_values else 0.0
+                total_kotak = round(sum(kotak_values), 2) if kotak_values else 0.0
 
                 sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_header)
                 sheet.write(rata_row, rata_col_value, total_avg if total_avg else "-", avg_total)
