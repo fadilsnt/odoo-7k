@@ -1241,8 +1241,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                         cont_total_export += cont_result
                         elf_row += 1
 
-                # sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
-                # sheet.write(elf_row + 1, elf_col, "CONT", fmt_header)
+                sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
+                sheet.write(elf_row + 1, elf_col, "CONT", fmt_header)
                 for i, grade in enumerate(grades):
                     sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade] if total_per_grade[grade] != 0 else "-", fmt_num_bold)
                     sheet.write(elf_row + 1, elf_col + i + 1, cont_per_grade[grade] if cont_per_grade[grade] != 0 else "-", fmt_cont_bold)
