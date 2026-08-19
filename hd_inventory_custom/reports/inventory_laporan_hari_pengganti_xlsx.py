@@ -1147,7 +1147,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 if box not in box_weight_map:
                     box_weight_map[box] = box_ptav.product_attribute_value_id.weight_per_product_attribute or 0.0
 
-                forecast_qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
                 if grade == 'FUEL' or variant.categ_id.name == 'FUEL':
                     self._cr.execute(
                         """
@@ -1158,9 +1157,9 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                                 JOIN stock_location dl ON dl.id = sml.location_dest_id
                             WHERE (sl.warehouse_id=%s OR dl.warehouse_id=%s) AND sml.product_id = %s AND sml.date<=%s AND sml.state NOT IN ('draft', 'cancel')
                         """, (warehouse_id, warehouse_id, warehouse_id, variant.id, current_max_date, ))
-                    forecast_qty = self._cr.fetchone()[0] or 0.0
-
-                export_data[box][desain][grade] += forecast_qty
+                    export_data[box][desain][grade] += self._cr.fetchone()[0] or 0.0
+                else:
+                    export_data[box][desain][grade] += variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
 
                 if cont:
                     try:
