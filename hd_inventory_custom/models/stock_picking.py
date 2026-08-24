@@ -27,11 +27,21 @@ class StockPicking(models.Model):
     consume_line_ids = fields.One2many('stock.picking.consume', 'picking_id', string='Consume Lines')
 
     ## Override
-    def _set_scheduled_date(self):
-        super()._set_scheduled_date()
+    @api.depends('move_ids.state', 'move_ids.date', 'move_type')
+    def _compute_scheduled_date(self):
         for picking in self:
-            if picking.state in ('done', 'cancel'):
+            if not picking.id:
                 continue
+            
+            moves_dates = picking.move_ids.mapped('date')
+            if picking.move_type == 'direct':
+                picking.scheduled_date = min(moves_dates, default=picking.scheduled_date or fields.Datetime.now())
+            else:
+                picking.scheduled_date = max(moves_dates, default=picking.scheduled_date or fields.Datetime.now())
+
+    def _set_scheduled_date(self):
+        for picking in self:
+            picking.sudo().move_ids.write({'date': picking.scheduled_date})
             picking.sudo().move_ids.move_line_ids.write({'date': picking.scheduled_date})
 
     def _compute_return_count(self):
