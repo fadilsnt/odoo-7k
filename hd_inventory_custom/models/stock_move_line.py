@@ -25,6 +25,20 @@ class StockMoveLine(models.Model):
     from_wizard = fields.Boolean(default=False)
     product_uom_id = fields.Many2one('uom.uom', string='Unit of Measure', required=True, domain="[('category_id', '=', product_uom_category_id)]", readonly=True)
 
+    # FORCE DATE
+    date = fields.Datetime(
+        'Date', compute="_compute_date", default=fields.Datetime.now, required=True,
+        help="Creation date of this move line until updated due to: quantity being increased, 'picked' status has updated, or move line is done.", store=True)
+
+    @api.depends("picking_id", "picking_id.scheduled_date", "move_id", "move_id.date")
+    def _compute_date(self):
+        for line in self:
+            date = fields.Datetime.now
+            if line.move_id and line.move_id.date:
+                date = line.move_id.date
+
+            line.date = date
+
     # =========================================================
     # PHYSICAL INVENTORY
     # =========================================================
