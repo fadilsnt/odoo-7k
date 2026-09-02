@@ -1167,10 +1167,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     except ValueError:
                         cont_value_map[box][desain] = 0.0
 
-            first_box = False
-            first_box_row = elf_row
-            first_box_col = elf_col
-            cont_total_box_8_10_kg = 0.0
+            
+            cont_gt_export = 0.0
 
             sorted_boxes = sorted(export_data.keys(), key=lambda b: box_weight_map.get(b, 0.0))
             for box in sorted_boxes:
@@ -1182,7 +1180,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     for grade, qty in grade_qty.items():
                         grade_totals[grade] += qty
 
-                # grades = sorted(g for g, total in grade_totals.items() if total != 0)
                 grades = sorted((g for g, total in grade_totals.items() if total != 0), key=lambda g: (g == 'FUEL', g))
                 if not grades:
                     continue
@@ -1195,14 +1192,6 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 if not valid_box:
                     continue
-                
-                if not first_box:
-                    first_box = True
-                    first_box_col += len(grades) + 4
-                
-                is_box_8_10_kg = False
-                if box_weight_map.get(box, 0.0) >= 8.0 and box_weight_map.get(box, 0.0) <= 10.0 or '8 kg' in box.lower() or '8kg' in box.lower() or '10 kg' in box.lower() or '10kg' in box.lower():
-                    is_box_8_10_kg = True
 
                 sheet.merge_range(elf_row, elf_col, elf_row, elf_col + len(grades) + 2, box, fmt_header)
                 elf_row += 1
@@ -1251,13 +1240,12 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 sheet.merge_range(elf_row, elf_col + len(grades) + 2, elf_row + 1, elf_col + len(grades) + 2, cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
                 elf_row += 3
 
-                if is_box_8_10_kg:
-                    cont_total_box_8_10_kg += cont_total_export
-            
-            if first_box:
-                sheet.merge_range(first_box_row, first_box_col, first_box_row, first_box_col + 1, "TOTAL BOX 10 KG & 8 KG", fmt_header)
-                sheet.write(first_box_row + 1, first_box_col, "CONT", fmt_header)
-                sheet.write(first_box_row + 1, first_box_col + 1, cont_total_box_8_10_kg if cont_total_box_8_10_kg != 0 else "-", fmt_cont_bold)
+                cont_gt_export += cont_total_export
+
+            gt_export_row = elf_row
+            sheet.merge_range(gt_export_row, 17, gt_export_row, 18, "TOTAL BOX EXPORT", fmt_header)
+            sheet.write(gt_export_row + 1, 17, "CONT", fmt_header)
+            sheet.write(gt_export_row + 1, 18, cont_gt_export if cont_gt_export != 0 else "-", fmt_cont_bold)
 
             def get_qty_per_uom(product, warehouse_id, current_max_date):
                 moves = product.stock_move_ids.filtered(
