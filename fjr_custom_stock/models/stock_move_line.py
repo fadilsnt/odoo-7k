@@ -3,6 +3,8 @@ from odoo.osv import expression
 
 class StockMoveLine(models.Model):
     _inherit = 'stock.move.line'
+    
+    warehouse_id = fields.Many2one('stock.warehouse', related='move_id.warehouse_id', string='Warehouse', store=True)
 
     container_quantity = fields.Float(
         string='Container Quantity',
@@ -25,10 +27,10 @@ class StockMoveLine(models.Model):
             else:
                 line.container_quantity = 0.0
 
-    @api.model
-    def _search(self, domain, offset=0, limit=None, order=None):
-        if self.env.user.allowed_warehouse_ids:
-            # If the user has specific allowed warehouses, filter by those
-            domain = [('picking_type_id.warehouse_id', 'in', self.env.user.allowed_warehouse_ids.ids)] + domain
-        return super(StockMoveLine, self)._search(domain, offset=offset, limit=limit, order=order)
+    # @api.model
+    # def _search(self, domain, offset=0, limit=None, order=None):
+    #     if self.env.user.allowed_warehouse_ids:
+    #         # If the user has specific allowed warehouses, filter by those
+    #         domain = [('picking_type_id.warehouse_id', 'in', self.env.user.allowed_warehouse_ids.ids)] + domain
+    #     return super(StockMoveLine, self)._search(domain, offset=offset, limit=limit, order=order)
         

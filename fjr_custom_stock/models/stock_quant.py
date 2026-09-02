@@ -36,9 +36,9 @@ class StockQuant(models.Model):
             else:
                 move.container_quantity = 0.0
 
-    @api.model
-    def _search(self, domain, offset=0, limit=None, order=None):
-        if self.env.user.allowed_warehouse_ids:
-            # If the user has specific allowed warehouses, filter by those
-            domain = [('warehouse_id', 'in', self.env.user.allowed_warehouse_ids.ids)] + domain
-        return super(StockQuant, self)._search(domain, offset=offset, limit=limit, order=order)
+    # @api.model
+    # def _search(self, domain, offset=0, limit=None, order=None):
+    #     if self.env.user.allowed_warehouse_ids:
+    #         # If the user has specific allowed warehouses, filter by those
+    #         domain = [('warehouse_id', 'in', self.env.user.allowed_warehouse_ids.ids)] + domain
+    #     return super(StockQuant, self)._search(domain, offset=offset, limit=limit, order=order)
