@@ -1353,6 +1353,11 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
             )
 
+            elf_row = write_category_section(
+                sheet, elf_row, "AVALAN", "AVALAN", warehouse_id, current_max_date,
+                fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
+            )
+
         # =========================================================
         # CASE 1 : SINGLE WAREHOUSE
         # =========================================================
