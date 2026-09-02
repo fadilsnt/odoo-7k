@@ -8,10 +8,14 @@ class StockMove(models.Model):
         help='Nomor container untuk pengiriman'
     )
 
+
     keterangan = fields.Char(
         string='Keterangan',
         help='Keterangan tambahan pengiriman'
     )
+    
+    etd = fields.Datetime(string='ETD', help='Estimated Time of Departure')
+    eta = fields.Datetime(string='ETA', help='Estimated Time of Arrival')
 
     @api.model
     def _prepare_merge_moves_distinct_fields(self):

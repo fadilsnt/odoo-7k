@@ -51,8 +51,8 @@
                       <tr>
                         <td style="border:1px solid #000;"><t t-esc="no"/></td>
                         <td style="text-align:left;border:1px solid #000;"><t t-esc="line['origin']"/></td>
-                        <td style="border:1px solid #000;"></td>
-                        <td style="border:1px solid #000;"></td>
+                        <td style="border:1px solid #000;"><t t-esc="line['etd']"/></td>
+                        <td style="border:1px solid #000;"><t t-esc="line['eta']"/></td>
                         <td style="text-align:left;border:1px solid #000;"><t t-esc="line['product']"/></td>
                         <td style="border:1px solid #000;"><t t-esc="line['grade']"/></td>
                         <td style="border:1px solid #000;">

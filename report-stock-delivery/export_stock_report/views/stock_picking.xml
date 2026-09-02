@@ -15,6 +15,11 @@
                 <field name="no_cont"
                     attrs="{'invisible': [('picking_type_code','!=','internal')]}" optional="hide"/>
             </xpath>
+            <xpath expr="//field[@name='move_ids_without_package']/list/field[@name='date']"
+             position="after">
+                <field name="etd" column_invisible="parent.picking_type_code != 'internal'" optional="hide"/>
+                <field name="eta" column_invisible="parent.picking_type_code != 'internal'" optional="hide"/>   
+            </xpath>
 
             <!-- keterangan sebelum product_uom -->
             <xpath expr="//field[@name='move_ids_without_package']/list/field[@name='product_uom']"

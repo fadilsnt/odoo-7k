@@ -4,7 +4,7 @@ import time
 import re
 import random
 from datetime import datetime, time
-
+import pytz
 
 class ReportDalamPengiriman(models.AbstractModel):
     _name = 'report.export_stock_report.stock_report_pengiriman'
@@ -19,7 +19,8 @@ class ReportDalamPengiriman(models.AbstractModel):
         # ===== Domain picking: hanya internal & ready =====
         domain = [
             ('picking_type_code', '=', 'internal'),
-            ('state', '=', 'assigned'),  # hanya status "Ready"
+            # ('state', '=', 'assigned'),  # hanya status "Ready"
+            ('state', 'in', ['waiting','confirmed','assigned']),  # status "Waiting & Ready"
             ('scheduled_date', '>=', start),
             ('scheduled_date', '<=', end),
         ]
@@ -27,7 +28,7 @@ class ReportDalamPengiriman(models.AbstractModel):
         # ===== Tambahkan filter warehouse jika dipilih =====
         if wizard.warehouse_ids:
             domain.append(('picking_type_id.warehouse_id', 'in', wizard.warehouse_ids.ids))
-
+        
         # ===== Ambil data picking =====
         pickings = self.env['stock.picking'].search(domain)
 
@@ -57,11 +58,16 @@ class ReportDalamPengiriman(models.AbstractModel):
                 qty = move.product_uom_qty
                 destination = picking.location_dest_id.display_name
                 no_cont = move.no_cont or '-'
+                tz = pytz.timezone(self.env.user.tz or 'Asia/Jakarta')
+                etd = move.etd.astimezone(tz).strftime('%d-%m-%Y %H:%M') if move.etd else ''
+                eta = move.eta.astimezone(tz).strftime('%d-%m-%Y %H:%M') if move.eta else ''
 
                 # ===== Inisialisasi jika belum ada =====
                 if no_cont not in result[warehouse][design][grade]:
                     result[warehouse][design][grade][no_cont] = {
                         'origin': no_cont,
+                        'etd': etd,
+                        'eta': eta,
                         'product': design,
                         'grade': grade,
                         'qty': 0,
