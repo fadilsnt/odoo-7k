@@ -30,7 +30,7 @@ class StockMoveLine(models.Model):
         'Date', compute="_compute_date", default=fields.Datetime.now, required=True,
         help="Creation date of this move line until updated due to: quantity being increased, 'picked' status has updated, or move line is done.", store=True)
 
-    @api.depends("picking_id", "picking_id.scheduled_date", "move_id", "move_id.date")
+    @api.depends("picking_id", "picking_id.scheduled_date", "move_id", "move_id.date", "move_id.state")
     def _compute_date(self):
         for line in self:
             date = fields.Datetime.now

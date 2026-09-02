@@ -1,6 +1,8 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 from odoo.tools.float_utils import float_compare
+import pytz
+from datetime import datetime, time
 
 class StockQuant(models.Model):
     _inherit = 'stock.quant'
@@ -59,6 +61,11 @@ class StockQuant(models.Model):
         
         if self.notes:
             vals['notes'] = self.notes
+
+        if self.inventory_date:
+            tz = pytz.timezone(self.env.user.tz or 'UTC')
+            dt = datetime.combine(self.inventory_date, time.min)
+            vals['inventory_date'] = tz.localize(dt).astimezone(pytz.UTC).replace(tzinfo=None)
 
         return vals
 

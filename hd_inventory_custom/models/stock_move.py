@@ -14,18 +14,22 @@ class StockMove(models.Model):
     tonase_asli = fields.Float(string="Tonase Asli")
     tonase_asli_demand = fields.Float(string="Tonase Asli Demand")
     is_tonase_move_line = fields.Boolean(string="is Tonase Move Line?", compute="_compute_is_tonase_move_line", default=False)
+    inventory_date = fields.Datetime(string="Inventory Date", help="Date of the inventory adjustment")
 
     # FORCE DATE
     date = fields.Datetime(
         'Date Scheduled', compute="_compute_date", default=fields.Datetime.now, index=True, required=True,
         help="Scheduled date until move is done, then date of actual move processing", store=True)
 
-    @api.depends("picking_id", "picking_id.scheduled_date", "name")
+    @api.depends("picking_id", "picking_id.scheduled_date", "state")
     def _compute_date(self):
         for move in self:
             date = fields.Datetime.now
             if move.picking_id and move.picking_id.scheduled_date:
                 date = move.picking_id.scheduled_date
+
+            if move.is_inventory and move.inventory_date:
+                date = move.inventory_date
 
             move.date = date
 
