@@ -59,8 +59,8 @@ class ReportDalamPengiriman(models.AbstractModel):
                 destination = picking.location_dest_id.display_name
                 no_cont = move.no_cont or '-'
                 tz = pytz.timezone(self.env.user.tz or 'Asia/Jakarta')
-                etd = move.etd.astimezone(tz).strftime('%d-%m-%Y %H:%M') if move.etd else ''
-                eta = move.eta.astimezone(tz).strftime('%d-%m-%Y %H:%M') if move.eta else ''
+                etd = move.etd.astimezone(tz).strftime('%d-%m-%Y') if move.etd else ''
+                eta = move.eta.astimezone(tz).strftime('%d-%m-%Y') if move.eta else ''
 
                 # ===== Inisialisasi jika belum ada =====
                 if no_cont not in result[warehouse][design][grade]:
