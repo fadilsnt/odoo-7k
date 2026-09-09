@@ -280,8 +280,20 @@ class StockMoveLine(models.Model):
     def write(self, vals):
         old_moves = self.mapped('move_id')
         uom_changed = 'product_uom_id' in vals
+        
+        vals_state = ''
+        if 'product_id' in vals and any(vals.get('state', ml.state) != 'draft' and vals['product_id'] != ml.product_id.id for ml in self):
+            for line in self:
+                if vals.get('state', line.state) not in ('cancel', 'done'):
+                    vals_state = vals.get('state', line.state)
+                    vals['state'] = 'draft'
 
         res = super().write(vals)
+
+        if vals_state:
+            for line in self:
+                line.move_id.write({'product_id': line.product_id.id})
+                line.write({'state': vals_state})
 
         # =================================================
         # PINDAH MOVE JIKA UOM BERUBAH

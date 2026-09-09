@@ -27,14 +27,14 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
 
     def _sync_move_quantity(self, move):
         total_qty = sum(move.move_line_ids.filtered(lambda ml: ml.from_wizard).mapped('quantity'))
-        total_tonase = sum(move.move_line_ids.filtered(lambda ml: ml.from_wizard).mapped('tonase_asli'))
+        # total_tonase = sum(move.move_line_ids.filtered(lambda ml: ml.from_wizard).mapped('tonase_asli'))
 
         move.with_context(
             bypass_reservation_update=True,
             bypass_move_line_create=True,
         ).write({
             'product_uom_qty': total_qty,
-            'tonase_asli': total_tonase
+            # 'tonase_asli': total_tonase
         })    
 
     def action_apply(self):
@@ -140,7 +140,7 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
         if candidate:
             candidate.write({
                 'quantity': candidate.quantity + line.qty,
-                'tonase_asli': candidate.tonase_asli + line.tonase_asli
+                'tonase_asli': candidate.tonase_asli
             })
         else:
             vals = self._prepare_move_line_vals(move, line)

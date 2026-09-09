@@ -97,6 +97,10 @@ class StockMove(models.Model):
             
             if vals.get('quantity') and not vals.get('product_uom_qty'):
                 vals['product_uom_qty'] = vals['quantity']
+    
+        if vals.get('product_id'):
+            for line in self.move_line_ids.filtered(lambda l: l.product_id.id != vals['product_id']):
+                line.write({'product_id': vals['product_id']})
 
         return super().write(vals)
     

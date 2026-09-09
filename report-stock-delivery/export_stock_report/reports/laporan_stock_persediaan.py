@@ -1,9 +1,10 @@
 from odoo import models, api
 from collections import defaultdict
-import time
+from datetime import datetime, time, date, timedelta
 import re
 import random
 import logging
+import pytz
 
 _logger = logging.getLogger(__name__)
 
@@ -14,6 +15,12 @@ class ReportStockWarehouse(models.AbstractModel):
     @api.model
     def _get_report_values(self, docids, data=None):
         wizard = self.env['wizard.laporan.persediaan'].browse(docids)
+        
+        tz = pytz.timezone("Asia/Jakarta")
+        end_date_local = datetime.strptime(str(wizard.end_date), "%Y-%m-%d")
+        end_max_local = tz.localize(datetime.combine(end_date_local, time.max))
+        end_max_date = end_max_local.astimezone(pytz.UTC).replace(tzinfo=None)
+
         if wizard.kategori_selection in ['all', 'lokal', 'export']:
             # ===== Domain picking =====
             move_domain = [
@@ -109,13 +116,14 @@ class ReportStockWarehouse(models.AbstractModel):
                         continue
                     seen_quant.add(seen_key)
 
-                    quant_domain = [
-                        ('product_id', '=', ml.product_id.id),
-                        ('location_id', 'child_of', wh.view_location_id.id),
-                        # ('owner_id', 'in', partners.ids)
-                    ]
+                    # quant_domain = [
+                    #     ('product_id', '=', ml.product_id.id),
+                    #     ('location_id', 'child_of', wh.view_location_id.id),
+                    #     # ('owner_id', 'in', partners.ids)
+                    # ]
                     
-                    qty_onhand = sum(self.env['stock.quant'].search(quant_domain).mapped('quantity'))
+                    # qty_onhand = sum(self.env['stock.quant'].search(quant_domain).mapped('quantity'))
+                    qty_onhand = ml.product_id.with_context(warehouse_id=wh.id, to_date=end_max_date).virtual_available
                     qty = qty_onhand
 
                     box = qty
@@ -479,11 +487,12 @@ class ReportStockWarehouse(models.AbstractModel):
                 seen.add(key)
 
                 # === QTY BOX (ON HAND) ===
-                quant_domain = [
-                    ('product_id', '=', product.id),
-                    ('location_id', 'child_of', wh.view_location_id.id),
-                ]
-                qty = sum(self.env['stock.quant'].search(quant_domain).mapped('quantity'))
+                # quant_domain = [
+                #     ('product_id', '=', product.id),
+                #     ('location_id', 'child_of', wh.view_location_id.id),
+                # ]
+                # qty = sum(self.env['stock.quant'].search(quant_domain).mapped('quantity'))
+                qty = product.with_context(warehouse_id=wh.id, to_date=end_max_date).virtual_available
                 if not qty:
                     continue
 
@@ -542,11 +551,12 @@ class ReportStockWarehouse(models.AbstractModel):
                 seen.add(key)
 
                 # === QTY ON HAND ===
-                quant_domain = [
-                    ('product_id', '=', product.id),
-                    ('location_id', 'child_of', wh.view_location_id.id),
-                ]
-                qty = sum(self.env['stock.quant'].search(quant_domain).mapped('quantity'))
+                # quant_domain = [
+                #     ('product_id', '=', product.id),
+                #     ('location_id', 'child_of', wh.view_location_id.id),
+                # ]
+                # qty = sum(self.env['stock.quant'].search(quant_domain).mapped('quantity'))
+                qty = product.with_context(warehouse_id=wh.id, to_date=end_max_date).virtual_available
                 if not qty:
                     continue
 

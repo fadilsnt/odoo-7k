@@ -1128,10 +1128,11 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 for ptav in variant.product_template_attribute_value_ids:
                     if ptav.attribute_id.name.lower() == attr_name.lower():
                         return ptav
+                
                 return self.env['product.template.attribute.value']
 
             export_data = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
-            cont_value_map = defaultdict(dict)
+            cont_data = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
             box_weight_map = {}
 
             for variant in export_ids:
@@ -1141,8 +1142,12 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 box = box_ptav.name or 'TANPA BOX'
                 grade = grade_ptav.name or 'FUEL'
-                cont = cont_ptav.name
-                desain = variant.product_tmpl_id.name
+                desain = variant.name
+
+                try:
+                    cont_rate = float(cont_ptav.name) if cont_ptav.name else 0.0
+                except ValueError:
+                    cont_rate = 0.0
 
                 if box not in box_weight_map:
                     box_weight_map[box] = box_ptav.product_attribute_value_id.weight_per_product_attribute or 0.0
@@ -1157,17 +1162,15 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                                 JOIN stock_location dl ON dl.id = sml.location_dest_id
                             WHERE (sl.warehouse_id=%s OR dl.warehouse_id=%s) AND sml.product_id = %s AND sml.date<=%s AND sml.state NOT IN ('draft', 'cancel')
                         """, (warehouse_id, warehouse_id, warehouse_id, variant.id, current_max_date, ))
-                    export_data[box][desain][grade] += self._cr.fetchone()[0] or 0.0
+                    qty = self._cr.fetchone()[0] or 0.0
                 else:
-                    export_data[box][desain][grade] += variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
+                    qty = variant.with_context(warehouse_id=warehouse_id, to_date=current_max_date).virtual_available
 
-                if cont:
-                    try:
-                        cont_value_map[box][desain] = float(cont)
-                    except ValueError:
-                        cont_value_map[box][desain] = 0.0
+                export_data[box][desain][grade] += qty
+                if cont_rate:
+                    cont_data[box][desain][grade] += (qty / cont_rate)
 
-            
+
             cont_gt_export = 0.0
 
             sorted_boxes = sorted(export_data.keys(), key=lambda b: box_weight_map.get(b, 0.0))
@@ -1212,21 +1215,22 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     row_total = sum(grade_qty.get(grade, 0.0) for grade in grades)
                     if row_total != 0:
                         sheet.write(elf_row, elf_col, desain, fmt_text_left)
+
+                        row_cont_result = 0.0
                         for i, grade in enumerate(grades):
                             qty = grade_qty.get(grade, 0.0)
                             sheet.write(elf_row, elf_col + i + 1, qty if qty != 0 else "-", fmt_num)
                             total_per_grade[grade] += qty
-                            cont_rate = cont_value_map.get(box, {}).get(desain, 0.0)
-                            cont_per_grade[grade] += (qty / cont_rate) if cont_rate and qty else 0.0
 
-                        cont_value = cont_value_map.get(box, {}).get(desain, 0.0)
-                        cont_result = (row_total / cont_value) if cont_value else 0.0
+                            cont_contrib = cont_data.get(box, {}).get(desain, {}).get(grade, 0.0)
+                            cont_per_grade[grade] += cont_contrib
+                            row_cont_result += cont_contrib
 
                         sheet.write(elf_row, elf_col + len(grades) + 1, row_total if row_total != 0 else "-", fmt_num)
-                        sheet.write(elf_row, elf_col + len(grades) + 2, cont_result if cont_result != 0 else "-", fmt_cont_bold)
+                        sheet.write(elf_row, elf_col + len(grades) + 2, row_cont_result if row_cont_result != 0 else "-", fmt_cont_bold)
 
                         grand_total_export += row_total
-                        cont_total_export += cont_result
+                        cont_total_export += row_cont_result
                         elf_row += 1
 
                 sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
