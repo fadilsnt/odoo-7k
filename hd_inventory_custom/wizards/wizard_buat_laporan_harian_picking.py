@@ -25,6 +25,57 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
     lubang_setom = fields.Char(string="Lubang Setom")
     bongkaran = fields.Char(string="Bongkaran")
 
+    # Modal Edit/Apply Baru
+    laporan_harian_id = fields.Many2one(
+        'stock.picking.laporan.harian', string="Laporan Harian", readonly=True)
+    readonly_mode = fields.Boolean(
+        string="Readonly",
+        default=lambda self: bool(self.env.context.get('laporan_harian_readonly')))
+
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+
+        laporan_harian_id = self.env.context.get('default_laporan_harian_id')
+        if not laporan_harian_id:
+            return res
+
+        laporan = self.env['stock.picking.laporan.harian'].browse(laporan_harian_id)
+        if not laporan.exists():
+            return res
+
+        res.update({
+            'laporan_harian_id': laporan.id,
+            'oven_number': laporan.oven_number,
+            'production_date': laporan.production_date,
+            'line_packing': laporan.line_packing,
+            'camp_tgl_briket': laporan.camp_tgl_briket,
+            'briket_tgu': laporan.briket_tgu,
+            'shift_briket': laporan.shift_briket,
+            'bkr': laporan.bkr,
+            'pembakar_penutup': laporan.pembakar_penutup,
+            'asumsi_berat_ikat': laporan.asumsi_berat_ikat,
+            'lubang_setom': laporan.lubang_setom,
+            'bongkaran': laporan.bongkaran,
+            'product_line_ids': [
+                (0, 0, {
+                    'product_id': ml.product_id.id,
+                    'product_uom_id': ml.product_uom_id.id,
+                    'qty': ml.quantity,
+                    'tonase_asli': ml.tonase_asli,
+                }) for ml in laporan.move_line_ids
+            ],
+            'consume_line_ids': [
+                (0, 0, {
+                    'product_id': c.product_id.id,
+                    'product_uom_id': c.product_uom_id.id,
+                    'qty': c.qty,
+                }) for c in laporan.consume_line_ids
+            ],
+        })
+
+        return res
+
     def _sync_move_quantity(self, move):
         total_qty = sum(move.move_line_ids.filtered(lambda ml: ml.from_wizard).mapped('quantity'))
         # total_tonase = sum(move.move_line_ids.filtered(lambda ml: ml.from_wizard).mapped('tonase_asli'))
@@ -39,6 +90,8 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
 
     def action_apply(self):
         self.ensure_one()
+        if self.readonly_mode:
+            return {'type': 'ir.actions.act_window_close'}
         return self.sudo().with_context(bypass_move_rule=True)._action_apply()
 
     def _action_apply(self):
@@ -48,16 +101,48 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
         MoveLine = self.env['stock.move.line'].sudo()
         moves = self.env['stock.move']
 
+        laporan = self._get_or_create_laporan_harian()
+
         for line in self.product_line_ids:
             move = self._get_or_create_move(line, Move)
-            self._upsert_move_line(move, line, MoveLine)
+            self._upsert_move_line(move, line, MoveLine, laporan)
 
             moves |= move
 
         for move in moves:
             self._sync_move_quantity(move)
-        
-        self._sync_consume_move()
+
+        self._sync_consume_move(laporan)
+
+        return {'type': 'ir.actions.client', 'tag': 'reload'}
+
+    def _laporan_harian_vals(self):
+        return {
+            'picking_id': self.picking_id.id,
+            'location_dest_id': self.location_dest_id.id,
+            'oven_number': self.oven_number,
+            'production_date': self.production_date,
+            'line_packing': self.line_packing,
+            'camp_tgl_briket': self.camp_tgl_briket,
+            'briket_tgu': self.briket_tgu,
+            'shift_briket': self.shift_briket,
+            'bkr': self.bkr,
+            'pembakar_penutup': self.pembakar_penutup,
+            'asumsi_berat_ikat': self.asumsi_berat_ikat,
+            'lubang_setom': self.lubang_setom,
+            'bongkaran': self.bongkaran,
+        }
+
+    def _get_or_create_laporan_harian(self):
+        vals = self._laporan_harian_vals()
+
+        if self.laporan_harian_id:
+            laporan = self.laporan_harian_id
+            laporan._rollback_contribution()
+            laporan.write(vals)
+            return laporan
+
+        return self.env['stock.picking.laporan.harian'].sudo().create(vals)
 
     def _get_or_create_move(self, line, Move):
         move = Move.search([
@@ -88,12 +173,13 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
             ('product_uom_id', '=', line.product_uom_id.id), 
         ])
 
-    def _prepare_move_line_vals(self, move, line):
+    def _prepare_move_line_vals(self, move, line, laporan):
         wizard = self.sudo()
         move = move.sudo()
 
         return {
             'from_wizard': True,
+            'laporan_harian_id': laporan.id,
             'picking_id': wizard.picking_id.id,
             'move_id': move.id,
             'product_id': line.product_id.id,
@@ -116,25 +202,13 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
             'lubang_setom': wizard.lubang_setom
         }
 
-    def _upsert_move_line(self, move, line, MoveLine):
-        wizard = self.sudo()
-
+    def _upsert_move_line(self, move, line, MoveLine, laporan):
         candidate = MoveLine.search([
             ('move_id', '=', move.id),
             ('product_id', '=', line.product_id.id),
             ('product_uom_id', '=', line.product_uom_id.id),
             ('from_wizard', '=', True),
-            ('oven_number', '=', wizard.oven_number or False),
-            ('production_date', '=', wizard.production_date or False),
-            ('line_packing', '=', wizard.line_packing or False),
-            ('camp_tgl_briket', '=', wizard.camp_tgl_briket or False),
-            ('briket_tgu', '=', wizard.briket_tgu or False),
-            ('shift_briket', '=', wizard.shift_briket or False),
-            ('bkr', '=', wizard.bkr or False),
-            ('pembakar_penutup', '=', wizard.pembakar_penutup or False),
-            ('asumsi_berat_ikat', '=', wizard.asumsi_berat_ikat or False),
-            ('bongkaran', '=', wizard.bongkaran or False),
-            ('lubang_setom', '=', wizard.lubang_setom or False),                        
+            ('laporan_harian_id', '=', laporan.id),
         ], limit=1)
 
         if candidate:
@@ -143,7 +217,7 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
                 'tonase_asli': candidate.tonase_asli
             })
         else:
-            vals = self._prepare_move_line_vals(move, line)
+            vals = self._prepare_move_line_vals(move, line, laporan)
             MoveLine.create(vals)
     
     # def _sync_picking_consume(self):
@@ -162,7 +236,9 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
     #                     'product_uom_id': line.product_uom_id.id,
     #                 })
 
-    def _sync_consume_move(self):
+    def _sync_consume_move(self, laporan):
+        ConsumeSnapshot = self.env['stock.picking.laporan.harian.consume'].sudo()
+
         for line in self.consume_line_ids:
             if line.product_id.id not in self.picking_id.consume_move_ids.mapped('product_id').ids:
                 scrap_location_id = self.picking_id._get_scrap_location(self.picking_id)
@@ -179,8 +255,8 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
                     'picking_id': self.picking_id.id,
                     'is_consume': True,
                 })
-                for line in move_id.move_line_ids:
-                    line.write({
+                for line2 in move_id.move_line_ids:
+                    line2.write({
                         'date': self.picking_id.scheduled_date,
                     })
 
@@ -191,10 +267,17 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
                         'quantity': consume.product_uom_qty + line.qty,
                         'product_uom': line.product_uom_id.id,
                     })
-                    for line in consume.move_line_ids:
-                        line.write({
+                    for line2 in consume.move_line_ids:
+                        line2.write({
                             'date': self.picking_id.scheduled_date,
                         })
+
+            ConsumeSnapshot.create({
+                'laporan_harian_id': laporan.id,
+                'product_id': line.product_id.id,
+                'qty': line.qty,
+                'product_uom_id': line.product_uom_id.id,
+            })
     
     def update_consume(self):
         self.ensure_one()

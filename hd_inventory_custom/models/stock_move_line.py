@@ -23,6 +23,9 @@ class StockMoveLine(models.Model):
     tonase_asli = fields.Float(string="Tonase Asli", compute="_compute_tonase_asli", store=True)
     bongkaran = fields.Char(string="Bongkaran")    
     from_wizard = fields.Boolean(default=False)
+    laporan_harian_id = fields.Many2one(
+        'stock.picking.laporan.harian', string="Laporan Harian",
+        ondelete='set null', index=True, copy=False)
     product_uom_id = fields.Many2one('uom.uom', string='Unit of Measure', required=True, domain="[('category_id', '=', product_uom_category_id)]", readonly=True)
 
     # FORCE DATE

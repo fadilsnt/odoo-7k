@@ -18,6 +18,32 @@
             <xpath expr="//notebook" position="inside">
                 <page name="laporan_harian" string="Laporan Harian">
                     <notebook>
+                        <page name="data_laporan_harian" string="Data Laporan Harian">
+                            <field name="laporan_harian_ids" nolabel="1" options="{'no_open': True}">
+                                <list string="Data Laporan Harian" create="0" edit="0" delete="0" limit="999">
+                                    <field name="picking_state" column_invisible="1"/>
+                                    <field name="kode" string="Kode"/>
+                                    <field name="oven_number" string="Nomor Oven"/>
+                                    <field name="production_date" string="Tanggal Briket"/>
+                                    <field name="camp_tgl_briket" string="Campuran"/>
+                                    <button name="action_open_view" type="object"
+                                            string="" icon="fa-eye"
+                                            title="Lihat"
+                                            class="btn-link"/>
+                                    <button name="action_open_edit" type="object"
+                                            string="" icon="fa-pencil"
+                                            title="Edit"
+                                            class="btn-link"
+                                            invisible="picking_state == 'done'"/>
+                                    <button name="action_delete" type="object"
+                                            string="" icon="fa-trash-o"
+                                            title="Hapus"
+                                            class="btn-link text-danger"
+                                            confirm="Yakin ingin menghapus data Laporan Harian ini? Move Line dan Consume Move terkait akan ikut disesuaikan."
+                                            invisible="picking_state == 'done'"/>
+                                </list>
+                            </field>
+                        </page>
                         <page name="product_line_ids" string="Product Lines">
                             <field name="move_line_ids" widget="one2many_search">
                                 <list editable="bottom" create="0" limit="999">

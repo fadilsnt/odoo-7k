@@ -25,6 +25,7 @@ class StockPicking(models.Model):
     return_count = fields.Integer(string="Return Count", compute="_compute_return_count")
     origin_picking_id = fields.Many2one('stock.picking', string="Origin Pickings")
     consume_line_ids = fields.One2many('stock.picking.consume', 'picking_id', string='Consume Lines')
+    laporan_harian_ids = fields.One2many('stock.picking.laporan.harian', 'picking_id', string='Data Laporan Harian')
 
     ## Override
     @api.depends('move_ids.state', 'move_ids.date', 'move_type')
