@@ -53,6 +53,7 @@ class StockPickingLaporanHarian(models.Model):
                 seq = self.search_count([('picking_id', '=', picking.id)]) + 1
                 vals['sequence'] = seq
                 oven = (vals.get('oven_number') or '').strip()
+                # Pola kode: PSR/IN/00053/AUTO_INCrement/NOMOR_OVEN
                 vals['kode'] = (
                     f"{picking.name}/{seq:03d}/{oven}" if oven
                     else f"{picking.name}/{seq:03d}"

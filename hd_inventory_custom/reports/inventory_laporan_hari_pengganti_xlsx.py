@@ -331,104 +331,104 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
         return row[0] if row and row[0] else {}
     
     def _get_repack_data(self, report_date, warehouse_id=None):
-        if isinstance(report_date, str):
-            report_date = datetime.strptime(report_date, "%Y-%m-%d")
-
-        date_from = report_date
-        date_to = report_date + timedelta(days=1)
-
-        params = {
-            'date_from': date_from,
-            'date_to': date_to,
-        }
-
-        _logger.warning("PARAMS: %s", params)
-
-        warehouse_filter = ""
-        if warehouse_id:
-            warehouse_filter = "AND sw.id = %(warehouse_id)s"
-            params['warehouse_id'] = warehouse_id
-
-        query = f"""
-            WITH bongkar AS (
-                SELECT 
-                    pt_a.name->>'id_ID' AS product,
-                    uu.name->>'id_ID' AS uom,
-                    SUM(srl.qty_a) AS qty
-                FROM stock_repack_line srl
-                LEFT JOIN product_product pp_a ON srl.product_a_id = pp_a.id
-                LEFT JOIN product_template pt_a ON pp_a.product_tmpl_id = pt_a.id
-                LEFT JOIN uom_uom uu ON pt_a.uom_id = uu.id
-
-                LEFT JOIN stock_picking sp ON srl.picking_id = sp.id
-                LEFT JOIN stock_location sl ON sp.location_dest_id = sl.id
-                LEFT JOIN stock_warehouse sw
-                    ON (
-                        sl.id = sw.view_location_id
-                        OR sl.parent_path LIKE '%%/' || sw.view_location_id || '/%%'
-                    )
-
-                WHERE 
-                    sp.scheduled_date >= %(date_from)s
-                    AND sp.scheduled_date < %(date_to)s
-                    {warehouse_filter}
-
-                GROUP BY pt_a.name->>'id_ID', uu.name->>'id_ID'
-            ),
-
-            menjadi AS (
-                SELECT 
-                    pt_b.name->>'id_ID' AS product,
-                    uu.name->>'id_ID' AS uom,
-                    SUM(sro.qty_b) AS qty
-                FROM stock_repack_output sro
-                JOIN stock_repack_line srl ON sro.repack_line_id = srl.id
-                LEFT JOIN product_product pp_b ON sro.product_b_id = pp_b.id
-                LEFT JOIN product_template pt_b ON pp_b.product_tmpl_id = pt_b.id
-                LEFT JOIN uom_uom uu ON pt_b.uom_id = uu.id
-
-                LEFT JOIN stock_picking sp ON srl.picking_id = sp.id
-                LEFT JOIN stock_location sl ON sp.location_dest_id = sl.id
-                LEFT JOIN stock_warehouse sw
-                    ON (
-                        sl.id = sw.view_location_id
-                        OR sl.parent_path LIKE '%%/' || sw.view_location_id || '/%%'
-                    )
-
-                WHERE 
-                    sp.scheduled_date >= %(date_from)s
-                    AND sp.scheduled_date < %(date_to)s
-                    {warehouse_filter}
-
-                GROUP BY pt_b.name->>'id_ID', uu.name->>'id_ID'
-            )
-
-            SELECT
-                'BONGKAR: ' || COALESCE(
-                    (
-                        SELECT string_agg(
-                            b.product || ': ' || TRIM(TRAILING '.0' FROM b.qty::text) || ' ' || COALESCE(b.uom, ''),
-                            ' + '
+            if isinstance(report_date, str):
+                report_date = datetime.strptime(report_date, "%Y-%m-%d")
+    
+            date_from = report_date
+            date_to = report_date + timedelta(days=1)
+    
+            params = {
+                'date_from': date_from,
+                'date_to': date_to,
+            }
+    
+            _logger.warning("PARAMS: %s", params)
+    
+            warehouse_filter = ""
+            if warehouse_id:
+                warehouse_filter = "AND sw.id = %(warehouse_id)s"
+                params['warehouse_id'] = warehouse_id
+    
+            query = f"""
+                WITH bongkar AS (
+                    SELECT 
+                        pt_a.name->>'id_ID' AS product,
+                        uu.name->>'id_ID' AS uom,
+                        SUM(srl.qty_a) AS qty
+                    FROM stock_repack_line srl
+                    LEFT JOIN product_product pp_a ON srl.product_a_id = pp_a.id
+                    LEFT JOIN product_template pt_a ON pp_a.product_tmpl_id = pt_a.id
+                    LEFT JOIN uom_uom uu ON pt_a.uom_id = uu.id
+    
+                    LEFT JOIN stock_picking sp ON srl.picking_id = sp.id
+                    LEFT JOIN stock_location sl ON sp.location_dest_id = sl.id
+                    LEFT JOIN stock_warehouse sw
+                        ON (
+                            sl.id = sw.view_location_id
+                            OR sl.parent_path LIKE '%%/' || sw.view_location_id || '/%%'
                         )
-                        FROM bongkar b
-                    ),
-                    '-'
-                ) AS bongkar,
-
-                'MENJADI: ' || COALESCE(
-                    (
-                        SELECT string_agg(
-                            m.product || ': ' || TRIM(TRAILING '.0' FROM m.qty::text) || ' ' || COALESCE(m.uom, ''),
-                            ' + '
+    
+                    WHERE 
+                        sp.scheduled_date >= %(date_from)s
+                        AND sp.scheduled_date < %(date_to)s
+                        {warehouse_filter}
+    
+                    GROUP BY pt_a.name->>'id_ID', uu.name->>'id_ID'
+                ),
+    
+                menjadi AS (
+                    SELECT 
+                        pt_b.name->>'id_ID' AS product,
+                        uu.name->>'id_ID' AS uom,
+                        SUM(sro.qty_b) AS qty
+                    FROM stock_repack_output sro
+                    JOIN stock_repack_line srl ON sro.repack_line_id = srl.id
+                    LEFT JOIN product_product pp_b ON sro.product_b_id = pp_b.id
+                    LEFT JOIN product_template pt_b ON pp_b.product_tmpl_id = pt_b.id
+                    LEFT JOIN uom_uom uu ON pt_b.uom_id = uu.id
+    
+                    LEFT JOIN stock_picking sp ON srl.picking_id = sp.id
+                    LEFT JOIN stock_location sl ON sp.location_dest_id = sl.id
+                    LEFT JOIN stock_warehouse sw
+                        ON (
+                            sl.id = sw.view_location_id
+                            OR sl.parent_path LIKE '%%/' || sw.view_location_id || '/%%'
                         )
-                        FROM menjadi m
-                    ),
-                    '-'
-                ) AS menjadi;
-        """
-
-        self.env.cr.execute(query, params)
-        return self.env.cr.fetchall()
+    
+                    WHERE 
+                        sp.scheduled_date >= %(date_from)s
+                        AND sp.scheduled_date < %(date_to)s
+                        {warehouse_filter}
+    
+                    GROUP BY pt_b.name->>'id_ID', uu.name->>'id_ID'
+                )
+    
+                SELECT
+                    'BONGKAR: ' || COALESCE(
+                        (
+                            SELECT string_agg(
+                                b.product || ': ' || (CASE WHEN b.qty = trunc(b.qty) THEN trunc(b.qty)::bigint::text ELSE b.qty::text END) || ' ' || COALESCE(b.uom, ''),
+                                ' + '
+                            )
+                            FROM bongkar b
+                        ),
+                        '-'
+                    ) AS bongkar,
+    
+                    'MENJADI: ' || COALESCE(
+                        (
+                            SELECT string_agg(
+                                m.product || ': ' || (CASE WHEN m.qty = trunc(m.qty) THEN trunc(m.qty)::bigint::text ELSE m.qty::text END) || ' ' || COALESCE(m.uom, ''),
+                                ' + '
+                            )
+                            FROM menjadi m
+                        ),
+                        '-'
+                    ) AS menjadi;
+            """
+    
+            self.env.cr.execute(query, params)
+            return self.env.cr.fetchall()
 
 
     def generate_xlsx_report(self, workbook, data, wizard):

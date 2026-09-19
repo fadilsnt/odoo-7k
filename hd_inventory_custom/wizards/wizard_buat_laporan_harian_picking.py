@@ -25,12 +25,16 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
     lubang_setom = fields.Char(string="Lubang Setom")
     bongkaran = fields.Char(string="Bongkaran")
 
-    # Modal Edit/Apply Baru
     laporan_harian_id = fields.Many2one(
         'stock.picking.laporan.harian', string="Laporan Harian", readonly=True)
     readonly_mode = fields.Boolean(
         string="Readonly",
         default=lambda self: bool(self.env.context.get('laporan_harian_readonly')))
+    applied = fields.Boolean(
+        string="Sudah Diterapkan", default=False, copy=False,
+        help="Penanda supaya klik ganda (double-click) pada tombol Apply "
+             "tidak memicu proses Apply lebih dari sekali dan menghasilkan "
+             "data/baris Laporan Harian yang dobel.")
 
     @api.model
     def default_get(self, fields_list):
@@ -92,6 +96,17 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
         self.ensure_one()
         if self.readonly_mode:
             return {'type': 'ir.actions.act_window_close'}
+
+        self.env.cr.execute(
+            'SELECT applied FROM %s WHERE id = %%s FOR UPDATE' % self._table,
+            (self.id,)
+        )
+        already_applied = self.env.cr.fetchone()
+        if already_applied and already_applied[0]:
+            return {'type': 'ir.actions.act_window_close'}
+
+        self.write({'applied': True})
+
         return self.sudo().with_context(bypass_move_rule=True)._action_apply()
 
     def _action_apply(self):
@@ -134,6 +149,11 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
         }
 
     def _get_or_create_laporan_harian(self):
+        """Mode Edit (laporan_harian_id terisi): buang kontribusi lama batch
+        ini (Move Line & Consume Move) lalu tulis ulang header-nya, supaya
+        _upsert_move_line/_sync_consume_move di bawah menulis data yang
+        benar-benar baru dari Wizard. Mode Baru: buat 1 baris Data Laporan
+        Harian baru (kode otomatis, lihat stock.picking.laporan.harian.create)."""
         vals = self._laporan_harian_vals()
 
         if self.laporan_harian_id:
