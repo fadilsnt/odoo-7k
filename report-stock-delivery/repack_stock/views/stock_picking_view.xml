@@ -23,6 +23,7 @@
                         <list>
                             <field name="product_a_id"/>
                             <field name="qty_a"/>
+                            <field name="move_a_state" string="Status Move" widget="badge"/>
                         </list>
 
                         <!-- FORM ketika klik baris -->
@@ -31,6 +32,8 @@
                             <group>
                                 <field name="product_a_id"/>
                                 <field name="qty_a"/>
+                                <field name="move_a_id" readonly="1" invisible="not move_a_id"/>
+                                <field name="move_a_state" readonly="1" invisible="not move_a_id" widget="badge"/>
                             </group>
 
                             <separator string="Hasil Repack"/>
@@ -44,6 +47,7 @@
 
                                     <field name="product_b_id"/>
                                     <field name="qty_b"/>
+                                    <field name="move_b_state" string="Status Move" widget="badge"/>
 
                                 </list>
 
@@ -51,6 +55,8 @@
                                     <group>
                                         <field name="product_b_id"/>
                                         <field name="qty_b"/>
+                                        <field name="move_b_id" readonly="1" invisible="not move_b_id"/>
+                                        <field name="move_b_state" readonly="1" invisible="not move_b_id" widget="badge"/>
                                     </group>
                                 </form>
 
