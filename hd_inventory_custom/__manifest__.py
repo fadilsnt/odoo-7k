@@ -24,6 +24,7 @@
         'wizards/wizard_buat_laporan_harian_picking_view.xml',
         'wizards/wizard_laporan_sparepart_bulanan_view.xml',
         'wizards/stock_opname_wizard.xml',
+        'wizards/packing_summary_wizard.xml',
         'views/product_template_views.xml',
         'views/stock_picking_views.xml',
         'views/stock_move_line_inherit_view.xml',

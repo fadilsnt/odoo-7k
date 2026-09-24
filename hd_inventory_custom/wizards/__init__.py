@@ -3,3 +3,4 @@ from . import wizard_buat_laporan_harian_picking
 from . import stock_picking_return
 from . import wizard_laporan_sparepart_bulanan
 from . import stock_opname_wizard
+from . import packing_summary_wizard

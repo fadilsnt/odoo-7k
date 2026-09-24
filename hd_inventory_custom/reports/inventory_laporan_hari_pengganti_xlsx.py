@@ -543,9 +543,11 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 avg_values = []
                 kotak_values = []
 
+                oven_count = total_oven or 1
+                
                 for grade_name in grade_names:
-                    avg_sum = []
-                    kotak_sum = []
+                    avg_total_qty = 0.0
+                    kotak_total_qty = 0.0
 
                     for o in ovens:
                         classification = o.get("classification") or "UNCLASSIFIED"
@@ -559,21 +561,24 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             qty = p.get("qty", 0) or 0
 
                             if product_name.lower().startswith("kotak"):
-                                kotak_sum.append(qty)
+                                kotak_total_qty += qty
                             else:
-                                avg_sum.append(qty)
+                                avg_total_qty += qty
 
                     sheet.write(rata_row, rata_col_label, grade_name, avg_content)
-                    if avg_sum:
-                        sheet.write(rata_row, rata_col_value, round(sum(avg_sum) / len(avg_sum), 2), avg_number)
-                        avg_values.append(round(sum(avg_sum) / len(avg_sum), 2))
+
+                    if avg_total_qty:
+                        avg_val = round(avg_total_qty / oven_count, 2)
+                        sheet.write(rata_row, rata_col_value, avg_val, avg_number)
+                        avg_values.append(avg_val)
                     else:
                         sheet.write(rata_row, rata_col_value, "-", avg_number)
 
                     if is_kotak:
-                        if kotak_sum:
-                            sheet.write(rata_row, rata_col_kotak, round(sum(kotak_sum) / len(kotak_sum), 2), avg_number)
-                            kotak_values.append(round(sum(kotak_sum) / len(kotak_sum), 2))
+                        if kotak_total_qty:
+                            kotak_val = round(kotak_total_qty / oven_count, 2)
+                            sheet.write(rata_row, rata_col_kotak, kotak_val, avg_number)
+                            kotak_values.append(kotak_val)
                         else:
                             sheet.write(rata_row, rata_col_kotak, "-", avg_number)
 
@@ -1355,7 +1360,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             )
 
             elf_row = write_category_section(
-                sheet, elf_row, "FUEL", "FUEL", warehouse_id, current_max_date,
+                sheet, elf_row, "SCRAP", "FUEL", warehouse_id, current_max_date,
                 fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
             )
 
