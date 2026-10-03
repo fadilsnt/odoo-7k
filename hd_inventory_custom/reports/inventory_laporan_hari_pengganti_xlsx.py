@@ -441,6 +441,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
         grade_records = self.env['product.attribute.value'].browse(grade_value_ids)
         grade_names = [rec.name for rec in grade_records if rec.exists()]
         is_kotak = bool(data.get('is_kotak'))
+        entry_total_oven = data.get('total_oven')
 
         # === NORMALISASI WAREHOUSE ===
         warehouse = None
@@ -543,7 +544,10 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 avg_values = []
                 kotak_values = []
 
-                oven_count = total_oven or 1
+                if entry_total_oven is not None and entry_total_oven > 0:
+                    oven_count = entry_total_oven
+                else:
+                    oven_count = total_oven or 1
                 
                 for grade_name in grade_names:
                     avg_total_qty = 0.0
@@ -1079,16 +1083,16 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                     self._cr.execute(
                         """
-                            SELECT sml.id FROM stock_move_line sml
-                                JOIN stock_location src ON src.id = sml.location_id
-                                JOIN stock_location dst ON dst.id = sml.location_dest_id
+                            SELECT sm.id FROM stock_move sm
+                                JOIN stock_location src ON src.id = sm.location_id
+                                JOIN stock_location dst ON dst.id = sm.location_dest_id
                             WHERE (src.warehouse_id=%s OR dst.warehouse_id=%s) AND
-                                sml.product_id = %s AND sml.date BETWEEN %s AND %s AND sml.state NOT IN ('draft', 'cancel')
-                            ORDER BY sml.date asc, sml.id
+                                sm.product_id = %s AND sm.date BETWEEN %s AND %s AND sm.state NOT IN ('draft', 'cancel')
+                            ORDER BY sm.date asc, sm.id
                         """, (warehouse_id, warehouse_id, variant.id, current_min_date, current_max_date, ))
-                    move_ids = self.env['stock.move.line'].browse([r[0] for r in self._cr.fetchall()])
-                    qty_in = sum(move.quantity for move in move_ids.filtered(lambda m: m.location_dest_id.warehouse_id.id == warehouse_id)) or 0.0
-                    qty_out = sum(move.quantity for move in move_ids.filtered(lambda m: m.location_id.warehouse_id.id == warehouse_id)) or 0.0
+                    move_ids = self.env['stock.move'].browse([r[0] for r in self._cr.fetchall()])
+                    qty_in = sum(move.quantity if move.quantity else move.product_uom_qty for move in move_ids.filtered(lambda m: m.location_dest_id.warehouse_id.id == warehouse_id)) or 0.0
+                    qty_out = sum(move.quantity if move.quantity else move.product_uom_qty for move in move_ids.filtered(lambda m: m.location_id.warehouse_id.id == warehouse_id)) or 0.0
                     ending_qty = beginning_qty + qty_in - qty_out
 
                     if beginning_qty != 0 or ending_qty != 0:

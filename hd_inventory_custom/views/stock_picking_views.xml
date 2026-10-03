@@ -26,6 +26,11 @@
                                     <field name="oven_number" string="Nomor Oven"/>
                                     <field name="production_date" string="Tanggal Briket"/>
                                     <field name="camp_tgl_briket" string="Campuran"/>
+                                    <button name="action_duplicate" type="object"
+                                            string="" icon="fa-copy"
+                                            title="Duplicate"
+                                            class="btn-link"
+                                            invisible="picking_state == 'done'"/>
                                     <button name="action_open_view" type="object"
                                             string="" icon="fa-eye"
                                             title="Lihat"

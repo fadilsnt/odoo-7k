@@ -22,6 +22,12 @@ class StockRepackLine(models.Model):
         required=True
     )
 
+    product_a_uom_id = fields.Many2one(
+        'uom.uom', "UoM", required=True, domain="[('category_id', '=', product_a_uom_category_id)]",
+        compute="_compute_product_a_uom", store=True, readonly=False, precompute=True,
+    )
+    product_a_uom_category_id = fields.Many2one(related='product_a_id.uom_id.category_id')
+
     product_b_id = fields.Many2one(
         "product.product",
         string="Product Repack",
@@ -83,6 +89,11 @@ class StockRepackLine(models.Model):
         res = super().unlink()
         moves._repack_cleanup_move()
         return res
+    
+    @api.depends('product_a_id')
+    def _compute_product_a_uom(self):
+        for rec in self:
+            rec.product_a_uom_id = rec.product_a_id.uom_id.id
 
     def _sync_move_a(self):
         Move = self.env['stock.move'].sudo()
@@ -101,7 +112,7 @@ class StockRepackLine(models.Model):
                 'name': _("Repack - Produk Awal %s") % rec.product_a_id.display_name,
                 'picking_id': picking.id,
                 'product_id': rec.product_a_id.id,
-                'product_uom': rec.product_a_id.uom_id.id,
+                'product_uom': rec.product_a_uom_id.id or rec.product_a_id.uom_id.id,
                 'product_uom_qty': rec.qty_a,
                 'quantity': rec.qty_a,
                 'location_id': picking.location_dest_id.id,
@@ -136,6 +147,12 @@ class StockRepackOutput(models.Model):
         string="Qty Hasil",
         required=True
     )
+
+    product_b_uom_id = fields.Many2one(
+        'uom.uom', "UoM", required=True, domain="[('category_id', '=', product_b_uom_category_id)]",
+        compute="_compute_product_b_uom", store=True, readonly=False, precompute=True,
+    )
+    product_b_uom_category_id = fields.Many2one(related='product_b_id.uom_id.category_id')
 
     move_b_id = fields.Many2one(
         "stock.move",
@@ -181,6 +198,11 @@ class StockRepackOutput(models.Model):
         res = super().unlink()
         moves._repack_cleanup_move()
         return res
+    
+    @api.depends('product_b_id')
+    def _compute_product_b_uom(self):
+        for rec in self:
+            rec.product_b_uom_id = rec.product_b_id.uom_id.id
 
     def _sync_move_b(self):
         Move = self.env['stock.move'].sudo()
@@ -200,7 +222,7 @@ class StockRepackOutput(models.Model):
                 'name': _("Repack - Produk Hasil %s") % rec.product_b_id.display_name,
                 'picking_id': picking.id,
                 'product_id': rec.product_b_id.id,
-                'product_uom': rec.product_b_id.uom_id.id,
+                'product_uom': rec.product_b_uom_id.id or rec.product_b_id.uom_id.id,
                 'product_uom_qty': rec.qty_b,
                 'quantity': rec.qty_b,
                 'location_id': picking.location_id.id,

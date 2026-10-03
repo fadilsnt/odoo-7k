@@ -37,6 +37,13 @@
                                 <field name="is_kotak"/>
                                 <span class="oe_inline">KOTAK</span>
                             </div>
+                            <label for="total_oven"/>
+                            <div>
+                                <field name="total_oven" class="oe_inline"/>
+                                <div class="alert alert-warning py-1 px-2 mb-0"><i class="fa fa-info-circle me-1"/>
+                                    Jika diisi maka pembagian total oven beracuan pada nilai diatas.
+                                </div>
+                            </div>
                         </group>
                         <group>
                             <field name="warehouse_id"/>

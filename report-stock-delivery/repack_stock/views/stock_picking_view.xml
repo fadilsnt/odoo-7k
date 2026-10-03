@@ -23,6 +23,7 @@
                         <list>
                             <field name="product_a_id"/>
                             <field name="qty_a"/>
+                            <field name="product_a_uom_id"/>
                             <field name="move_a_state" string="Status Move" widget="badge"/>
                         </list>
 
@@ -31,7 +32,11 @@
 
                             <group>
                                 <field name="product_a_id"/>
-                                <field name="qty_a"/>
+                                <label for="qty_a" string="Qty Awal"/>
+                                <div class="o_row">
+                                    <field name="qty_a" class="oe_inline"/>
+                                    <field name="product_a_uom_id" class="oe_inline"/>
+                                </div>
                                 <field name="move_a_id" readonly="1" invisible="not move_a_id"/>
                                 <field name="move_a_state" readonly="1" invisible="not move_a_id" widget="badge"/>
                             </group>
@@ -47,6 +52,7 @@
 
                                     <field name="product_b_id"/>
                                     <field name="qty_b"/>
+                                    <field name="product_b_uom_id"/>
                                     <field name="move_b_state" string="Status Move" widget="badge"/>
 
                                 </list>
@@ -54,7 +60,11 @@
                                 <form string="Repack Output">
                                     <group>
                                         <field name="product_b_id"/>
-                                        <field name="qty_b"/>
+                                        <label for="qty_b" string="Qty Hasil"/>
+                                        <div class="o_row">
+                                            <field name="qty_b" class="oe_inline"/>
+                                            <field name="product_b_uom_id" class="oe_inline"/>
+                                        </div>
                                         <field name="move_b_id" readonly="1" invisible="not move_b_id"/>
                                         <field name="move_b_state" readonly="1" invisible="not move_b_id" widget="badge"/>
                                     </group>

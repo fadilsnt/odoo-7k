@@ -423,6 +423,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
         grade_records = self.env['product.attribute.value'].browse(grade_value_ids)
         grade_names = [rec.name for rec in grade_records if rec.exists()]
         is_kotak = bool(data.get('is_kotak'))
+        entry_total_oven = data.get('total_oven')
 
         # === NORMALISASI WAREHOUSE ===
         warehouse = None
@@ -522,7 +523,10 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 avg_values = []
                 kotak_values = []
 
-                oven_count = total_oven or 1
+                if entry_total_oven is not None and entry_total_oven > 0:
+                    oven_count = entry_total_oven
+                else:
+                    oven_count = total_oven or 1
                 
                 for grade_name in grade_names:
                     avg_total_qty = 0.0

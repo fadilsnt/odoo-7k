@@ -135,6 +135,7 @@ class PackingSummaryWizard(models.TransientModel):
             report_data AS (
                 SELECT
                     warehouse,
+                    product_category,
                     COALESCE(classification, 'FUEL') AS grade,
                     weight_per_product_attribute,
                     SUM(qty) AS qty,
@@ -144,6 +145,7 @@ class PackingSummaryWizard(models.TransientModel):
 
                 GROUP BY
                     warehouse,
+                    product_category,
                     COALESCE(classification,'FUEL'),
                     weight_per_product_attribute
             ),
@@ -151,6 +153,7 @@ class PackingSummaryWizard(models.TransientModel):
             final_data AS (
                 SELECT
                     rd.warehouse,
+                    rd.product_category,
                     rd.grade,
                     rd.weight_per_product_attribute,
                     rd.qty,
@@ -163,6 +166,7 @@ class PackingSummaryWizard(models.TransientModel):
 
             SELECT
                 warehouse,
+                product_category,
                 grade,
                 weight_per_product_attribute,
                 qty,
@@ -173,6 +177,7 @@ class PackingSummaryWizard(models.TransientModel):
 
             ORDER BY
                 warehouse,
+                array_position(%(allowed_categories)s::text[], product_category::text),
                 grade,
                 weight_per_product_attribute
         """
@@ -406,26 +411,26 @@ class PackingSummaryWizard(models.TransientModel):
                     avg_tonase_oven = tonase_packing / total_oven if total_oven else 0
                     wh_avg_tonase_oven += avg_tonase_oven
 
-                    worksheet1.write(i, 2, quantity, number_right)
+                    worksheet1.write(i, 2, quantity, integer_right)
                     worksheet1.write(i, 3, avg_quantity, number_right)
                     worksheet1.write(i, 4, weight, number_center)
-                    worksheet1.write(i, 5, total_packing, number_right)
+                    worksheet1.write(i, 5, total_packing, integer_right)
                     worksheet1.write(i, 6, percent_packing, number_center)
                     worksheet1.write(i, 7, avg_oven, number_right)
                     worksheet1.write(i, 8, tonase_asli, number_center)
-                    worksheet1.write(i, 9, tonase_packing, number_right)
+                    worksheet1.write(i, 9, tonase_packing, integer_right)
                     worksheet1.write(i, 10, percent_tonase_packing, number_center)
                     worksheet1.write(i, 11, avg_tonase_oven, number_right)
                     worksheet1.write(i, 12, '', number_right)
                     i += 1
             
             worksheet1.merge_range(i, 0, i, 1, 'TOTAL', footer_center)
-            worksheet1.write(i, 2, wh_quantity, number_right_bold)
+            worksheet1.write(i, 2, wh_quantity, integer_right_bold)
             worksheet1.write(i, 3, wh_avg_quantity, number_right_bold)
-            worksheet1.write(i, 5, wh_packing, number_right_bold)
+            worksheet1.write(i, 5, wh_packing, integer_right_bold)
             worksheet1.write(i, 6, wh_percent_packing, number_center_bold)
             worksheet1.write(i, 7, wh_avg_oven, number_right_bold)
-            worksheet1.write(i, 9, wh_tonase_packing, number_right_bold)
+            worksheet1.write(i, 9, wh_tonase_packing, integer_right_bold)
             worksheet1.write(i, 10, wh_percent_tonase_packing, number_center_bold)
             worksheet1.write(i, 11, wh_avg_tonase_oven, number_right_bold)
             worksheet1.write(i, 12, total_oven, number_right_bold)
@@ -436,11 +441,11 @@ class PackingSummaryWizard(models.TransientModel):
         wh_avg_tonase_packing = gt_tonase_packing / gt_oven if gt_oven else 0
 
         worksheet1.merge_range(i, 0, i, 1, 'TOTAL SELURUH', footer_center)
-        worksheet1.write(i, 2, gt_quantity, number_right_bold)
+        worksheet1.write(i, 2, gt_quantity, integer_right_bold)
         worksheet1.write(i, 3, wh_avg_quantity, number_right_bold)
-        worksheet1.write(i, 5, gt_packing, number_right_bold)
+        worksheet1.write(i, 5, gt_packing, integer_right_bold)
         worksheet1.write(i, 7, wh_avg_packing, number_right_bold)
-        worksheet1.write(i, 9, gt_tonase_packing, number_right_bold)
+        worksheet1.write(i, 9, gt_tonase_packing, integer_right_bold)
         worksheet1.write(i, 11, wh_avg_tonase_packing, number_right_bold)
         worksheet1.write(i, 12, gt_oven, number_right_bold)
 

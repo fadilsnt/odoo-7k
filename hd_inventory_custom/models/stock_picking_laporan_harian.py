@@ -50,7 +50,12 @@ class StockPickingLaporanHarian(models.Model):
         for vals in vals_list:
             if not vals.get('kode') and vals.get('picking_id'):
                 picking = self.env['stock.picking'].browse(vals['picking_id'])
-                seq = self.search_count([('picking_id', '=', picking.id)]) + 1
+                # Auto increment berdasarkan sequence tertinggi (bukan count),
+                # supaya kode tidak bentrok setelah ada baris yang dihapus.
+                last = self.search(
+                    [('picking_id', '=', picking.id)],
+                    order='sequence desc, id desc', limit=1)
+                seq = (last.sequence or 0) + 1
                 vals['sequence'] = seq
                 oven = (vals.get('oven_number') or '').strip()
                 # Pola kode: PSR/IN/00053/AUTO_INCrement/NOMOR_OVEN
@@ -80,6 +85,22 @@ class StockPickingLaporanHarian(models.Model):
                 'default_picking_id': self.picking_id.id,
                 'default_location_dest_id': self.location_dest_id.id,
                 'default_laporan_harian_id': self.id,
+            },
+        }
+
+    def action_duplicate(self):
+        self.ensure_one()
+        self._check_editable()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Duplikat Laporan Harian'),
+            'res_model': 'wizard.buat.laporan.harian.picking',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_picking_id': self.picking_id.id,
+                'default_location_dest_id': self.location_dest_id.id,
+                'default_duplicate_laporan_id': self.id,
             },
         }
 

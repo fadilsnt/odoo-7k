@@ -40,16 +40,20 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
 
-        laporan_harian_id = self.env.context.get('default_laporan_harian_id')
-        if not laporan_harian_id:
+        edit_id = self.env.context.get('default_laporan_harian_id')
+        duplicate_id = self.env.context.get('default_duplicate_laporan_id')
+        source_id = edit_id or duplicate_id
+        if not source_id:
             return res
 
-        laporan = self.env['stock.picking.laporan.harian'].browse(laporan_harian_id)
+        laporan = self.env['stock.picking.laporan.harian'].browse(source_id)
         if not laporan.exists():
             return res
 
+        if edit_id:
+            res['laporan_harian_id'] = laporan.id
+
         res.update({
-            'laporan_harian_id': laporan.id,
             'oven_number': laporan.oven_number,
             'production_date': laporan.production_date,
             'line_packing': laporan.line_packing,
