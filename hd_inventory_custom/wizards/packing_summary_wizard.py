@@ -81,7 +81,11 @@ class PackingSummaryWizard(models.TransientModel):
                     pc.name AS product_category,
                     uu.name->>'id_ID' AS uom_category,
                     COALESCE(uu.weight_per_uom_category, 0) AS weight_per_uom_category,
-                    MAX(COALESCE(pav.weight_per_product_attribute, 0)) AS weight_per_product_attribute,
+                    COALESCE(
+                        NULLIF(NULLIF(MAX(COALESCE(pav.weight_per_product_attribute, 0)), 0), 1),
+                        NULLIF(uu.weight_per_uom_category, 0),
+                        0
+                    ) AS weight_per_product_attribute,
                     MAX(CASE WHEN pa.name->>'id_ID' = 'Grade' THEN pav.name->>'id_ID' END) AS classification,
                     bm.qty,
                     bm.tonase_asli
