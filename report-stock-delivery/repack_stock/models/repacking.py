@@ -18,7 +18,7 @@ class StockRepackLine(models.Model):
     )
 
     qty_a = fields.Float(
-        string="Qty",
+        string="Qty Awal",
         required=True
     )
 
@@ -34,7 +34,7 @@ class StockRepackLine(models.Model):
     )
 
     qty_b = fields.Float(
-        string="Qty",
+        string="Qty Repack",
     )
 
     repack_output_ids = fields.One2many(
@@ -121,7 +121,9 @@ class StockRepackLine(models.Model):
                 'repack_line_id': rec.id,
             }
 
-            if move and move.state not in ('done', 'cancel'):
+            if move and move.state == 'done':
+                continue
+            if move and move.state != 'cancel':
                 move.write(vals)
             else:
                 new_move = Move.create(vals)
@@ -228,10 +230,13 @@ class StockRepackOutput(models.Model):
                 'location_id': picking.location_id.id,
                 'location_dest_id': picking.location_dest_id.id,
                 'company_id': picking.company_id.id,
+                'repack_line_id': line.id,
                 'repack_output_id': rec.id,
             }
 
-            if move and move.state not in ('done', 'cancel'):
+            if move and move.state == 'done':
+                continue
+            if move and move.state != 'cancel':
                 move.write(vals)
             else:
                 new_move = Move.create(vals)

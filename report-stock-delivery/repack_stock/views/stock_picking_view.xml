@@ -11,8 +11,6 @@
 
                 <page string="Repack">
 
-                    <!-- Button -->
-
                     <field name="is_repack_done" invisible="1"/>
 
                     <!-- ===================== -->
