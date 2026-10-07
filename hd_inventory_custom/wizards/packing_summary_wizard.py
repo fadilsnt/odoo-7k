@@ -23,6 +23,10 @@ class PackingSummaryWizard(models.TransientModel):
     start_date = fields.Date(string="Date", required=True, default=lambda self: date.today().replace(day=1))
     end_date = fields.Date(string="End Date", required=True, default=lambda self: (date.today().replace(day=1) + relativedelta(months=1, days=-1)))
     is_all_warehouse = fields.Boolean(string="Is All Warehouse", default=False)
+    report_type = fields.Selection([
+        ('main', 'Pusat'),
+        ('branch', 'Cabang'),
+    ], string="Jenis Laporan", default='main', required=True)
     file = fields.Binary('File')
 
     def _get_data_report(self, start_date, end_date, warehouse_ids):
@@ -140,7 +144,11 @@ class PackingSummaryWizard(models.TransientModel):
                 SELECT
                     warehouse,
                     product_category,
-                    COALESCE(classification, 'FUEL') AS grade,
+                    CASE
+                        WHEN UPPER(TRIM(product)) LIKE 'FUEL JUMBO BAG%%' THEN 'FUEL JUMBO BAG'
+                        WHEN UPPER(TRIM(product)) LIKE 'SCRAP%%' THEN 'SCRAP'
+                        ELSE COALESCE(classification, 'FUEL')
+                    END AS grade,
                     weight_per_product_attribute,
                     SUM(qty) AS qty,
                     MAX(COALESCE(tonase_asli, 0)) AS tonase_asli
@@ -150,7 +158,11 @@ class PackingSummaryWizard(models.TransientModel):
                 GROUP BY
                     warehouse,
                     product_category,
-                    COALESCE(classification,'FUEL'),
+                    CASE
+                        WHEN UPPER(TRIM(product)) LIKE 'FUEL JUMBO BAG%%' THEN 'FUEL JUMBO BAG'
+                        WHEN UPPER(TRIM(product)) LIKE 'SCRAP%%' THEN 'SCRAP'
+                        ELSE COALESCE(classification, 'FUEL')
+                    END,
                     weight_per_product_attribute
             ),
 
@@ -182,6 +194,12 @@ class PackingSummaryWizard(models.TransientModel):
             ORDER BY
                 warehouse,
                 array_position(%(allowed_categories)s::text[], product_category::text),
+                CASE grade
+                    WHEN 'FUEL' THEN 1
+                    WHEN 'FUEL JUMBO BAG' THEN 2
+                    WHEN 'SCRAP' THEN 3
+                    ELSE 0
+                END,
                 grade,
                 weight_per_product_attribute
         """
@@ -460,6 +478,6 @@ class PackingSummaryWizard(models.TransientModel):
         
         return{
             'type' : 'ir.actions.act_url',
-            'url': 'web/content/?model=packing.summary.wizard&field=file&download=true&id=%s&filename=Laporan Rekap Packing.xlsx'%(self.id),
+            'url': 'web/content/?model=packing.summary.wizard&field=file&download=true&id=%s&filename=Laporan Rekap Packing (%s).xlsx'%(self.id, dict(self._fields["report_type"].selection).get(self.report_type)),
             'target': 'new',
         }

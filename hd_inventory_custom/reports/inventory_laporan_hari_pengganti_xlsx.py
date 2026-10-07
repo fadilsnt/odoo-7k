@@ -483,6 +483,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             fmt_text_center = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter'})
             fmt_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
             fmt_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
+            fmt_float = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0.0'})
+            fmt_float_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.0'})
             fmt_other_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_other_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_cont_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
@@ -1346,7 +1348,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 for desain_label, weight, qty, total in rows:
                     sheet.write(elf_row, 12, desain_label, fmt_text_left)
-                    sheet.write(elf_row, 13, weight if weight != 0 else "-", fmt_num)
+                    sheet.write(elf_row, 13, weight if weight != 0 else "-", fmt_float)
                     sheet.write(elf_row, 14, qty if qty != 0 else '-', fmt_num)
                     sheet.write(elf_row, 15, total if total != 0 else "-", fmt_num)
                     elf_row += 1
