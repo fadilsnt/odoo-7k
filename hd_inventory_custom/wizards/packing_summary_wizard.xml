@@ -24,6 +24,7 @@
                             <field name="start_date" string="Date" required="True" widget="daterange" options="{'end_date_field': 'end_date'}" />
                             <field name="end_date" required="True" invisible="1"/>
                         </div>
+                        <field name="grade_value_ids" widget="many2many_tags" string="Total Grade"/>
                     </group>
                 </group>
                 <footer>

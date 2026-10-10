@@ -81,6 +81,9 @@
                             invisible="readonly_mode or applied"/>
                     <button string="Cancel" special="cancel" invisible="readonly_mode"/>
                     <button string="Close" special="cancel" invisible="not readonly_mode"/>
+                    <space/>
+                    <span class="o_form_label" style="font-size: 13px;">TOTAL TONASE : </span>
+                    <field name="total_tonase"/>
                 </footer>
 
             </form>

@@ -36,6 +36,17 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
              "tidak memicu proses Apply lebih dari sekali dan menghasilkan "
              "data/baris Laporan Harian yang dobel.")
 
+    total_tonase = fields.Float(string="Total Tonase", compute="_compute_total_tonase")
+
+    @api.depends('product_line_ids','product_line_ids.qty','product_line_ids.product_uom_id')
+    def _compute_total_tonase(self):
+        for record in self:
+            total_tonase = 0
+            for line in record.product_line_ids:
+                total_tonase += line.qty * line.product_uom_id.weight_per_uom_category
+            
+            record.total_tonase = total_tonase
+
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
