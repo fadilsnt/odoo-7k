@@ -87,11 +87,16 @@ class PackingSummaryWizard(models.TransientModel):
                     pc.name AS product_category,
                     uu.name->>'id_ID' AS uom_category,
                     COALESCE(uu.weight_per_uom_category, 0) AS weight_per_uom_category,
-                    COALESCE(
-                        NULLIF(NULLIF(MAX(COALESCE(pav.weight_per_product_attribute, 0)), 0), 1),
-                        NULLIF(uu.weight_per_uom_category, 0),
-                        0
-                    ) AS weight_per_product_attribute,
+                    CASE
+                        WHEN pc.name = 'EXPORT' THEN
+                            COALESCE(
+                                NULLIF(NULLIF(MAX(COALESCE(pav.weight_per_product_attribute, 0)), 0), 1),
+                                NULLIF(uu.weight_per_uom_category, 0),
+                                0
+                            )
+                        ELSE
+                            COALESCE(uu.weight_per_uom_category, 0)
+                    END AS weight_per_product_attribute,
                     MAX(CASE WHEN pa.name->>'id_ID' = 'Grade' THEN pav.name->>'id_ID' END) AS classification,
                     MAX(CASE WHEN pa.name->>'id_ID' = 'Grade' THEN pav.sequence END) AS grade_sequence,
                     MAX(CASE WHEN pa.name->>'id_ID' = 'Grade' THEN pav.id END) AS grade_value_id,
