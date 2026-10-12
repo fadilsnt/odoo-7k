@@ -1169,11 +1169,14 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     self._cr.execute(
                         """
                             SELECT SUM(
-                                CASE WHEN dl.warehouse_id = %s THEN sml.quantity ELSE -sml.quantity END
-                            ) FROM stock_move_line sml
-                                JOIN stock_location sl ON sl.id = sml.location_id
-                                JOIN stock_location dl ON dl.id = sml.location_dest_id
-                            WHERE (sl.warehouse_id=%s OR dl.warehouse_id=%s) AND sml.product_id = %s AND sml.date<=%s AND sml.state NOT IN ('draft', 'cancel')
+                                CASE WHEN dl.warehouse_id = %s
+                                    THEN COALESCE(NULLIF(sm.quantity, 0), sm.product_uom_qty, 0)
+                                    ELSE -COALESCE(NULLIF(sm.quantity, 0), sm.product_uom_qty, 0)
+                                END
+                            ) FROM stock_move sm
+                                JOIN stock_location sl ON sl.id = sm.location_id
+                                JOIN stock_location dl ON dl.id = sm.location_dest_id
+                            WHERE (sl.warehouse_id=%s OR dl.warehouse_id=%s) AND sm.product_id = %s AND sm.date<=%s AND sm.state NOT IN ('draft', 'cancel')
                         """, (warehouse_id, warehouse_id, warehouse_id, variant.id, current_max_date, ))
                     qty = self._cr.fetchone()[0] or 0.0
                 else:
