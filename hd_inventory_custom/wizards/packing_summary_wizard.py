@@ -512,6 +512,7 @@ class PackingSummaryWizard(models.TransientModel):
                     worksheet1.write(i, 9, gs_tonase_packing, integer_right_bold)
                     worksheet1.write(i, 10, gs_percent_tonase, number_center_bold)
                     worksheet1.write(i, 11, gs_avg_tonase_oven, number_right_bold)
+                    worksheet1.write(i, 12, '', number_right_bold)
                     i += 1
             
             worksheet1.merge_range(i, 0, i, 1, 'TOTAL', footer_center)
