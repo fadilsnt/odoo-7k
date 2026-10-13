@@ -20,11 +20,11 @@ class UoM(models.Model):
             result.append((rec.id, "%s (%s)" % (rec.name, rec.weight_per_uom_category)))
         return result
     
-    @api.depends('name', 'weight_per_uom_category')
-    def _compute_display_name(self):
-        for rec in self:
-            name = rec.name
-            if rec.weight_per_uom_category:
-                name += f' ({rec.weight_per_uom_category})'
+    # @api.depends('name', 'weight_per_uom_category')
+    # def _compute_display_name(self):
+    #     for rec in self:
+    #         name = rec.name
+    #         if rec.weight_per_uom_category:
+    #             name += f' ({rec.weight_per_uom_category})'
 
-            rec.display_name = name
+    #         rec.display_name = name
