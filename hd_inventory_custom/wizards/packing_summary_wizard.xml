@@ -10,7 +10,7 @@
                     <group>
                         <label for="warehouse_id"/>
                         <div class="o_row">
-                            <field name="warehouse_id" widget="many2many_tags" invisible="is_all_warehouse"/>
+                            <field name="warehouse_id" widget="many2many_tags" required="not is_all_warehouse" invisible="is_all_warehouse"/>
                             <div class="alert alert-warning py-1 px-2 mb-0" invisible="not is_all_warehouse"><i class="fa fa-info-circle me-1"/>
                                 All warehouses will be included in the report.
                             </div>

@@ -16,6 +16,7 @@ class WizardInventoryLaporanHariPengganti(models.TransientModel):
     grade_value_ids = fields.Many2many('product.attribute.value', 'wizard_grade_value_ids', 'wizard_id', 'grade_value_id', string="Attribute Values", domain="[('attribute_id.name', 'in', ['grade','Grade','GRADE'])]")
     is_kotak = fields.Boolean(string="Is Kotak", default=False)
     total_oven = fields.Integer(string="Total Oven")
+    average_by_grade = fields.Boolean(string="Average by Grade", default=False)
     report_type = fields.Selection(selection=SELECTION_REPORT_TYPE, string="Report Type", default='quantity_base')
 
     def action_print_xlsx_report(self):
@@ -43,5 +44,6 @@ class WizardInventoryLaporanHariPengganti(models.TransientModel):
             'grade_value_ids': self.grade_value_ids.ids if self.grade_value_ids else False,
             'is_kotak': self.is_kotak,
             'total_oven': self.total_oven,
+            'average_by_grade': self.average_by_grade,
 
         })

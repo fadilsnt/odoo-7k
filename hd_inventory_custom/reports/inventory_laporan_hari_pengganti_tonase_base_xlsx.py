@@ -424,6 +424,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
         grade_names = [rec.name for rec in grade_records if rec.exists()]
         is_kotak = bool(data.get('is_kotak'))
         entry_total_oven = data.get('total_oven')
+        average_by_grade = bool(data.get('average_by_grade'))
 
         # === NORMALISASI WAREHOUSE ===
         warehouse = None
@@ -523,7 +524,20 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 avg_values = []
                 kotak_values = []
 
-                if entry_total_oven is not None and entry_total_oven > 0:
+                if average_by_grade:
+                    oven_grade_list = []
+                    for o in ovens:
+                        classification = o.get("classification") or "UNCLASSIFIED"
+                        grade_key = classification.split(' (')[0].strip()
+                        if grade_key not in grade_names:
+                            continue
+
+                        oven_grade_key = _get_oven_key(o.get("oven"), o.get("production_date"))
+                        if oven_grade_key not in oven_grade_list:
+                            oven_grade_list.append(oven_grade_key)
+                    
+                    oven_count = len(oven_grade_list) or 1
+                elif entry_total_oven is not None and entry_total_oven > 0:
                     oven_count = entry_total_oven
                 else:
                     oven_count = total_oven or 1

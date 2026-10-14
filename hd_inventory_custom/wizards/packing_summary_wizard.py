@@ -14,6 +14,11 @@ import logging
 _logger = logging.getLogger(__name__)
 
 ALLOWED_PRODUCT_CATEGORIES = ['EXPORT', 'FUEL', 'LOKAL']
+MONTH_NAMES = {
+    1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April',
+    5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus',
+    9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember',
+}
 
 class PackingSummaryWizard(models.TransientModel):
     _name = 'packing.summary.wizard'
@@ -29,6 +34,29 @@ class PackingSummaryWizard(models.TransientModel):
     ], string="Jenis Laporan", default='main', required=True)
     grade_value_ids = fields.Many2many('product.attribute.value', 'rel_packing_summary_grade_value_ids', 'wizard_id', 'grade_value_id', string="Attribute Values", domain="[('attribute_id.name', 'in', ['grade','Grade','GRADE'])]")
     file = fields.Binary('File')
+
+    @staticmethod
+    def _clean_box_label(label):
+        label = re.sub(r'\([^)]*\)', '', label or '')
+        label = re.sub(r'\s+', ' ', label).strip()
+        return label or '-'
+
+    def _get_period(self, start_date, end_date):
+
+        if start_date.year != end_date.year:
+            return "%s %s %s - %s %s %s" % (
+                start_date.day, MONTH_NAMES[start_date.month], start_date.year,
+                end_date.day, MONTH_NAMES[end_date.month], end_date.year,
+            )
+        if start_date.month != end_date.month:
+            return "%s %s - %s %s %s" % (
+                start_date.day, MONTH_NAMES[start_date.month],
+                end_date.day, MONTH_NAMES[end_date.month], end_date.year,
+            )
+            
+        return "%s - %s %s %s" % (
+            start_date.day, end_date.day, MONTH_NAMES[end_date.month], end_date.year,
+        )
 
     def _get_data_report(self, start_date, end_date, warehouse_ids):
         warehouse_filter = ""
@@ -47,6 +75,8 @@ class PackingSummaryWizard(models.TransientModel):
             WITH base_move AS (
                 SELECT
                     sw.name AS warehouse,
+                    sw.sequence AS warehouse_sequence,
+                    sw.id AS warehouse_id,
                     sml.oven_number AS oven,
                     sml.production_date AS production_date,
                     sml.product_id,
@@ -69,6 +99,8 @@ class PackingSummaryWizard(models.TransientModel):
 
                 GROUP BY
                     sw.name,
+                    sw.sequence,
+                    sw.id,
                     sml.oven_number,
                     sml.production_date,
                     sml.product_id,
@@ -79,6 +111,8 @@ class PackingSummaryWizard(models.TransientModel):
             base_data AS (
                 SELECT
                     bm.warehouse,
+                    bm.warehouse_sequence,
+                    bm.warehouse_id,
                     bm.oven,
                     bm.production_date,
                     bm.product_id,
@@ -97,6 +131,18 @@ class PackingSummaryWizard(models.TransientModel):
                         ELSE
                             COALESCE(uu.weight_per_uom_category, 0)
                     END AS weight_per_product_attribute,
+                    CASE
+                        WHEN pc.name = 'EXPORT' THEN
+                            COALESCE(
+                                (ARRAY_AGG(
+                                    pav.name->>'id_ID'
+                                    ORDER BY pav.weight_per_product_attribute DESC
+                                ) FILTER (WHERE COALESCE(pav.weight_per_product_attribute, 0) NOT IN (0, 1)))[1],
+                                uu.name->>'id_ID'
+                            )
+                        ELSE
+                            uu.name->>'id_ID'
+                    END AS box_label,
                     MAX(CASE WHEN pa.name->>'id_ID' = 'Grade' THEN pav.name->>'id_ID' END) AS classification,
                     MAX(CASE WHEN pa.name->>'id_ID' = 'Grade' THEN pav.sequence END) AS grade_sequence,
                     MAX(CASE WHEN pa.name->>'id_ID' = 'Grade' THEN pav.id END) AS grade_value_id,
@@ -117,6 +163,8 @@ class PackingSummaryWizard(models.TransientModel):
 
                 GROUP BY
                     bm.warehouse,
+                    bm.warehouse_sequence,
+                    bm.warehouse_id,
                     bm.oven,
                     bm.production_date,
                     bm.product_id,
@@ -153,6 +201,8 @@ class PackingSummaryWizard(models.TransientModel):
             report_data AS (
                 SELECT
                     warehouse,
+                    warehouse_sequence,
+                    warehouse_id,
                     product_category,
                     CASE
                         WHEN UPPER(TRIM(product)) LIKE 'FUEL JUMBO BAG%%' THEN 'FUEL JUMBO BAG'
@@ -160,6 +210,7 @@ class PackingSummaryWizard(models.TransientModel):
                         ELSE COALESCE(classification, 'FUEL')
                     END AS grade,
                     weight_per_product_attribute,
+                    box_label,
                     COALESCE(tonase_asli, 0) AS tonase_asli,
                     SUM(qty) AS qty,
                     MIN(
@@ -181,6 +232,8 @@ class PackingSummaryWizard(models.TransientModel):
 
                 GROUP BY
                     warehouse,
+                    warehouse_sequence,
+                    warehouse_id,
                     product_category,
                     CASE
                         WHEN UPPER(TRIM(product)) LIKE 'FUEL JUMBO BAG%%' THEN 'FUEL JUMBO BAG'
@@ -188,17 +241,21 @@ class PackingSummaryWizard(models.TransientModel):
                         ELSE COALESCE(classification, 'FUEL')
                     END,
                     weight_per_product_attribute,
+                    box_label,
                     COALESCE(tonase_asli, 0)
             ),
 
             final_data AS (
                 SELECT
                     rd.warehouse,
+                    rd.warehouse_sequence,
+                    rd.warehouse_id,
                     rd.product_category,
                     rd.grade,
                     rd.grade_sequence,
                     rd.grade_value_id,
                     rd.weight_per_product_attribute,
+                    rd.box_label,
                     rd.tonase_asli,
                     rd.qty,
                     COALESCE(wot.total_oven, 0) AS total_oven
@@ -212,6 +269,7 @@ class PackingSummaryWizard(models.TransientModel):
                 product_category,
                 grade,
                 weight_per_product_attribute,
+                box_label,
                 tonase_asli,
                 qty,
                 total_oven
@@ -219,7 +277,8 @@ class PackingSummaryWizard(models.TransientModel):
             FROM final_data
 
             ORDER BY
-                warehouse,
+                warehouse_sequence,
+                warehouse_id,
                 CASE WHEN grade = 'SCRAP' THEN 1 ELSE 0 END,
                 array_position(%(allowed_categories)s::text[], product_category::text),
                 grade_sequence ASC NULLS LAST,
@@ -231,7 +290,8 @@ class PackingSummaryWizard(models.TransientModel):
                 END,
                 grade,
                 weight_per_product_attribute,
-                tonase_asli
+                tonase_asli,
+                box_label
         """
         self.env.cr.execute(query, params)
         rows = self.env.cr.dictfetchall()
@@ -241,6 +301,7 @@ class PackingSummaryWizard(models.TransientModel):
             return {}
 
         result = {}
+        item_index = {}
         for row in rows:
             warehouse = row['warehouse']
             grade = row['grade']
@@ -249,13 +310,26 @@ class PackingSummaryWizard(models.TransientModel):
                 'total_oven': row['total_oven'],
                 'grades': {},
             })
-
             grade_data = warehouse_data['grades'].setdefault(grade, {'items': []})
-            grade_data['items'].append({
-                'weight_per_product_attribute': row['weight_per_product_attribute'],
-                'qty': row['qty'],
-                'tonase_asli': row['tonase_asli'],
-            })
+
+            key = (warehouse, grade, row['weight_per_product_attribute'], row['tonase_asli'])
+            item = item_index.get(key)
+            if item is None:
+                item = {
+                    'weight_per_product_attribute': row['weight_per_product_attribute'],
+                    'tonase_asli': row['tonase_asli'],
+                    'qty': 0,
+                    'boxes': {},
+                }
+                item_index[key] = item
+                grade_data['items'].append(item)
+
+            qty = float(row['qty'] or 0)
+            item['qty'] += qty
+
+            box_label = self._clean_box_label(row['box_label'])
+            box = item['boxes'].setdefault(box_label.upper(), {'label': box_label, 'qty': 0})
+            box['qty'] += qty
 
         try:
             pretty_json = json.dumps(result, indent=2, ensure_ascii=False, default=str)
@@ -264,49 +338,16 @@ class PackingSummaryWizard(models.TransientModel):
             _logger.error("Gagal membuat JSON report: %s", e)
 
         return result
-    
-    def format_date_range(self, start_date, end_date):
-        bulan = [
-            "JANUARI", "FEBRUARI", "MARET", "APRIL",
-            "MEI", "JUNI", "JULI", "AGUSTUS",
-            "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"
-        ]
-
-        if isinstance(start_date, str):
-            start_date = date.fromisoformat(start_date)
-
-        if isinstance(end_date, str):
-            end_date = date.fromisoformat(end_date)
-
-        if start_date.year == end_date.year:
-            if start_date.month == end_date.month:
-                return (
-                    f"{start_date.day:02d} - "
-                    f"{end_date.day:02d} {bulan[end_date.month - 1]} "
-                    f"{end_date.year}"
-                )
-
-            return (
-                f"{start_date.day:02d} {bulan[start_date.month - 1]} - "
-                f"{end_date.day:02d} {bulan[end_date.month - 1]} "
-                f"{end_date.year}"
-            )
-
-        return (
-            f"{start_date.day:02d} {bulan[start_date.month - 1]} "
-            f"{start_date.year} - "
-            f"{end_date.day:02d} {bulan[end_date.month - 1]} "
-            f"{end_date.year}"
-        )
 
     def button_print(self):
         self.ensure_one()
 
         warehouse_ids = None
-        if self.warehouse_id:
-            warehouse_ids = self.warehouse_id.ids
-        else:
+        if self.is_all_warehouse:
             warehouse_ids = self.env['stock.warehouse'].search([]).ids
+        else:
+            warehouse_ids = self.warehouse_id.ids
+            
         
         data_report = self._get_data_report(self.start_date, self.end_date, warehouse_ids if warehouse_ids else None)
 
@@ -381,7 +422,7 @@ class PackingSummaryWizard(models.TransientModel):
         worksheet1.set_column('M:M', 15)
 
         worksheet1.merge_range('A2:M2', 'REKAP HASIL PACKING BARANG JADI', title_center)
-        worksheet1.merge_range('A3:M3', 'PERIODE '  + '(' + str(self.format_date_range(self.start_date, self.end_date)) + ')', title_center)
+        worksheet1.merge_range('A3:M3', 'PERIODE '  + '(' + str(self._get_period(self.start_date, self.end_date)) + ')', title_center)
 
         i = 4
         worksheet1.merge_range(i, 0, i+3, 0, 'PABRIK', header_table)
@@ -405,6 +446,7 @@ class PackingSummaryWizard(models.TransientModel):
         gt_oven = 0
         gt_packing = 0
         gt_tonase_packing = 0
+        branch_refs = {}
 
         for wh_name, wh_data in data_report.items():
             total_oven = wh_data.get('total_oven', 0)
@@ -449,6 +491,8 @@ class PackingSummaryWizard(models.TransientModel):
                 if not items:
                     continue
 
+                is_selected_grade = (grade_name or '').strip().upper() in selected_grades_upper
+
                 if len(items) > 1:
                     worksheet1.merge_range(i, 1, i + len(items) - 1, 1, grade_name, content_center)
                 else:
@@ -482,6 +526,19 @@ class PackingSummaryWizard(models.TransientModel):
                     worksheet1.write(i, 10, percent_tonase_packing, number_center)
                     worksheet1.write(i, 11, avg_tonase_oven, number_right)
                     worksheet1.write(i, 12, '', number_right)
+
+                    if is_selected_grade:
+                        for box_key, b in item.get('boxes', {}).items():
+                            box_ref = branch_refs.setdefault(wh_name, {}).setdefault(box_key, {
+                                'label': b['label'],
+                                'weight': 0.0,
+                                'box': 0.0,
+                                'tonase': 0.0,
+                            })
+                            box_ref['weight'] = max(box_ref['weight'], float(weight or 0))
+                            box_ref['box'] += (b['qty'] / total_oven) if total_oven else 0
+                            box_ref['tonase'] += (b['qty'] * float(tonase_asli or 0) / total_oven) if total_oven else 0
+
                     i += 1
 
             if selected_grades_upper:
@@ -545,6 +602,66 @@ class PackingSummaryWizard(models.TransientModel):
         worksheet1.write(i, 11, wh_avg_tonase_packing, number_right_bold)
         worksheet1.write(i, 12, gt_oven, number_right_bold)
 
+        if branch_refs:
+            branch_rows = []
+            for wh_name, boxes in branch_refs.items():
+                box_list = sorted(boxes.values(), key=lambda b: (-b['weight'], b['label']))
+                total_box = sum(b['box'] for b in box_list)
+                total_tonase = sum(b['tonase'] for b in box_list)
+                branch_rows.append({
+                    'warehouse': wh_name,
+                    'boxes': box_list,
+                    'total_box': total_box,
+                    'total_tonase': total_tonase,
+                    'total_avg': (total_tonase / total_box) if total_box else 0,
+                })
+            
+            branch_rows.sort(
+                key=lambda r: (round(r['total_avg'], 1), r['total_box'], r['total_tonase']),
+                reverse=True,
+            )
+
+            title_row = i + 2
+            worksheet1.merge_range(title_row, 0, title_row, 12, 'URUTAN CABANG BERDASARKAN RATA-RATA PER OVEN', title_center)
+
+            h = title_row + 2
+            worksheet1.set_row(h, 20)
+            worksheet1.set_row(h + 1, 20)
+            worksheet1.merge_range(h, 2, h + 1, 2, 'NO.', header_table)
+            worksheet1.merge_range(h, 3, h + 1, 3, 'PABRIK', header_table)
+            worksheet1.merge_range(h, 4, h + 1, 4, 'UKURAN\nBOX', header_table)
+            worksheet1.merge_range(h, 5, h + 1, 5, 'BOX\n' + ','.join(selected_grades), header_table)
+            worksheet1.merge_range(h, 6, h + 1, 6, 'TONASE ASLI\n(KG)', header_table)
+            worksheet1.merge_range(h, 7, h + 1, 7, 'RATA-RATA\nPER BOX (KG)', header_table)
+            worksheet1.merge_range(h, 8, h + 1, 10, 'KETERANGAN', header_table)
+
+            r = h + 2
+            for no, br in enumerate(branch_rows, 1):
+                first_row = r
+                for b in br['boxes']:
+                    avg_value = (b['tonase'] / b['box']) if b['box'] else 0
+                    worksheet1.write(r, 4, b['label'], content_left)
+                    worksheet1.write(r, 5, b['box'], number_right)
+                    worksheet1.write(r, 6, b['tonase'], number_right)
+                    worksheet1.write(r, 7, avg_value, number_right)
+                    worksheet1.merge_range(r, 8, r, 10, '', content_left)
+                    r += 1
+                last_detail_row = r - 1
+
+                if last_detail_row > first_row:
+                    worksheet1.merge_range(first_row, 3, last_detail_row, 3, br['warehouse'], header_table)
+                else:
+                    worksheet1.write(first_row, 3, br['warehouse'], header_table)
+
+                worksheet1.merge_range(r, 3, r, 4, 'TOTAL', footer_center)
+                worksheet1.write(r, 5, br['total_box'], number_right_bold)
+                worksheet1.write(r, 6, br['total_tonase'], number_right_bold)
+                worksheet1.write(r, 7, br['total_avg'], number_right_bold)
+                worksheet1.merge_range(r, 8, r, 10, '', content_left)
+
+                worksheet1.merge_range(first_row, 2, r, 2, no, content_center)
+                r += 1
+
         workbook.close()
         file=base64.encodebytes(fp.getvalue())
         self.write({'file':file})
@@ -552,6 +669,6 @@ class PackingSummaryWizard(models.TransientModel):
         
         return{
             'type' : 'ir.actions.act_url',
-            'url': 'web/content/?model=packing.summary.wizard&field=file&download=true&id=%s&filename=Laporan Rekap Packing (%s).xlsx'%(self.id, dict(self._fields["report_type"].selection).get(self.report_type)),
+            'url': 'web/content/?model=packing.summary.wizard&field=file&download=true&id=%s&filename=Laporan Rekap Packing (%s %s).xlsx'%(self.id, dict(self._fields["report_type"].selection).get(self.report_type), self._get_period(self.start_date, self.end_date)),
             'target': 'new',
         }
