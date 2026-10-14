@@ -47,8 +47,6 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
         for record in self:
             total_tonase = 0.0
             for line in record.product_line_ids:
-                print ("==========================")
-
                 weight = line.product_uom_id.weight_per_uom_category or 0.0
 
                 if (line.product_id.categ_id.name or '').strip().upper() == 'EXPORT':
@@ -60,15 +58,8 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
                     attr_weight = max(box_values.mapped('weight_per_product_attribute') or [0.0])
                     if attr_weight:
                         weight = attr_weight
-                
-                print ("===PRODUCT",line.product_id.name)
-                print ("====== QTY",line.qty)
-                print ("====== WEIGHT",weight)
-                
 
                 total_tonase += line.qty * weight
-                print ("====== TOTAL",total_tonase)
-                print ("==========================\n")
 
             record.total_tonase = total_tonase
 
