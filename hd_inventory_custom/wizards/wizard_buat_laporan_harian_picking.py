@@ -41,24 +41,34 @@ class WizardBuatLaporanHarianPicking(models.TransientModel):
     @api.depends(
         'product_line_ids',
         'product_line_ids.product_id',
-        'product_line_ids.qty',
-        'product_line_ids.product_uom_id',
+        'product_line_ids.qty'
     )
     def _compute_total_tonase(self):
         for record in self:
             total_tonase = 0.0
             for line in record.product_line_ids:
+                print ("==========================")
+
                 weight = line.product_uom_id.weight_per_uom_category or 0.0
 
                 if (line.product_id.categ_id.name or '').strip().upper() == 'EXPORT':
-                    attr_weights = (
+                    box_values = (
                         line.product_id.product_template_attribute_value_ids
+                        .filtered(lambda v: (v.attribute_id.name or '').strip().upper() == 'BOX')
                         .product_attribute_value_id
-                        .mapped('weight_per_product_attribute')
                     )
-                    attr_weight = max(attr_weights) if attr_weights else 1.0
+                    attr_weight = max(box_values.mapped('weight_per_product_attribute') or [0.0])
+                    if attr_weight:
+                        weight = attr_weight
+                
+                print ("===PRODUCT",line.product_id.name)
+                print ("====== QTY",line.qty)
+                print ("====== WEIGHT",weight)
+                
 
                 total_tonase += line.qty * weight
+                print ("====== TOTAL",total_tonase)
+                print ("==========================\n")
 
             record.total_tonase = total_tonase
 
