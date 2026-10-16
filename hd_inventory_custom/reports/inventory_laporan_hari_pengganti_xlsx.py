@@ -547,20 +547,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 avg_values = []
                 kotak_values = []
 
-                if average_by_grade:
-                    oven_grade_list = []
-                    for o in ovens:
-                        classification = o.get("classification") or "UNCLASSIFIED"
-                        grade_key = classification.split(' (')[0].strip()
-                        if grade_key not in grade_names:
-                            continue
-
-                        oven_grade_key = _get_oven_key(o.get("oven"), o.get("production_date"))
-                        if oven_grade_key not in oven_grade_list:
-                            oven_grade_list.append(oven_grade_key)
-                    
-                    oven_count = len(oven_grade_list) or 1
-                elif entry_total_oven is not None and entry_total_oven > 0:
+                if entry_total_oven is not None and entry_total_oven > 0:
                     oven_count = entry_total_oven
                 else:
                     oven_count = total_oven or 1
@@ -569,12 +556,17 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     avg_total_qty = 0.0
                     kotak_total_qty = 0.0
 
+                    oven_grade_list = []
                     for o in ovens:
                         classification = o.get("classification") or "UNCLASSIFIED"
                         grade_key = classification.split(' (')[0].strip()
 
                         if grade_key != grade_name:
                             continue
+
+                        oven_grade_key = _get_oven_key(o.get("oven"), o.get("production_date"))
+                        if oven_grade_key not in oven_grade_list:
+                            oven_grade_list.append(oven_grade_key)
 
                         for p in o.get("products", []):
                             product_name = (p.get("product") or "").strip()
@@ -584,6 +576,9 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                                 kotak_total_qty += qty
                             else:
                                 avg_total_qty += qty
+                    
+                    if average_by_grade:
+                        oven_count = len(oven_grade_list) or 1
 
                     sheet.write(rata_row, rata_col_label, grade_name, avg_content)
 
