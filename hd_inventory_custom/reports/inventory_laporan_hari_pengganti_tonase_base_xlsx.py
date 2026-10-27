@@ -9,6 +9,97 @@ import pytz
 
 _logger = logging.getLogger(__name__)
 
+from xlsxwriter.utility import cell_autofit_width
+
+def _enable_autofit(sheet, min_px=20, max_px=500, padding_px=0,
+                    skip_rows=(0,), skip_prefixes=(),
+                    bold_factor=1.1, use_merged=True, font_size=11):
+    singles = {}      # col -> lebar pixel terbesar
+    merges = []       # (first_col, last_col, lebar pixel)
+    state = {"in_merge": False}
+    scale = font_size / 11.0   # cell_autofit_width mengukur untuk Calibri 11
+
+    def _text_px(value, fmt):
+        if value is None or value == "":
+            return 0
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            nf = getattr(fmt, "num_format", "General") if fmt else "General"
+            nf = nf if isinstance(nf, str) else "General"
+            if "0.00" in nf:
+                s = f"{value:,.2f}"
+            elif "0.0" in nf:
+                s = f"{value:,.1f}"
+            elif "#,##0" in nf:
+                s = f"{value:,.0f}"
+            else:
+                s = f"{value:g}"
+        else:
+            s = str(value)
+
+        is_bold = fmt is not None and getattr(fmt, "bold", 0)
+
+        def _line_px(line):
+            # cell_autofit_width = lebar teks + 7 px padding tetap
+            text_px = cell_autofit_width(line) - 7
+            if is_bold:
+                text_px *= bold_factor
+            return text_px * scale + 7
+
+        return max(_line_px(line) for line in s.split("\n"))
+
+    def _skip(row, value):
+        return row in skip_rows or (
+            isinstance(value, str) and value.startswith(skip_prefixes))
+
+    orig_write = sheet.write
+    orig_merge = sheet.merge_range
+
+    def write(row, col, *args):
+        if not state["in_merge"] and isinstance(row, int) and isinstance(col, int):
+            value = args[0] if args else None
+            fmt = args[1] if len(args) > 1 else None
+            if not _skip(row, value):
+                w = _text_px(value, fmt)
+                if w:
+                    singles[col] = max(singles.get(col, 0), w)
+        return orig_write(row, col, *args)
+
+    def merge_range(first_row, first_col, last_row, last_col, data, fmt=None):
+        if not _skip(first_row, data):
+            w = _text_px(data, fmt)
+            if w:
+                if first_col == last_col:
+                    singles[first_col] = max(singles.get(first_col, 0), w)
+                elif use_merged:
+                    merges.append((first_col, last_col, w))
+        state["in_merge"] = True
+        try:
+            return orig_merge(first_row, first_col, last_row, last_col, data, fmt)
+        finally:
+            state["in_merge"] = False
+
+    sheet.write = write
+    sheet.merge_range = merge_range
+
+    def apply():
+        widths = {c: min(max(w + padding_px, min_px), max_px)
+                  for c, w in singles.items()}
+
+        # merged cell: tambah lebar hanya bila total kolom gabungan kurang
+        for c1, c2, w in sorted(merges, key=lambda m: m[1] - m[0]):
+            need = w + padding_px
+            cols = range(c1, c2 + 1)
+            have = sum(widths.get(c, min_px) for c in cols)
+            if have < need:
+                extra = (need - have) / len(cols)
+                for c in cols:
+                    widths[c] = min(widths.get(c, min_px) + extra, max_px)
+
+        for c, w in widths.items():
+            sheet.set_column_pixels(c, c, int(w))
+
+    return apply
+
 def fmt_qty(val):
     s = f"{float(val):.1f}" 
     return s.rstrip("0").rstrip(".")
@@ -470,6 +561,16 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
         _logger.info("Repack Data %s", repack_data)
 
+        FONT_SIZE = 15
+        _orig_add_format = workbook.add_format
+
+        def _add_format(props=None):
+            props = dict(props or {})
+            props.setdefault('font_size', FONT_SIZE)
+            return _orig_add_format(props)
+
+        workbook.add_format = _add_format
+
         # =========================================================
         # RENDER SHEET
         # =========================================================
@@ -487,12 +588,16 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
             fmt_total_center = workbook.add_format({'border': 1, 'bold': True, 'align': 'center', 'valign': 'vcenter'})
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'bold': True})
+            fmt_repack = workbook.add_format({'align': 'left', 'valign': 'vcenter'})
 
             # FORMAT TABLE AVERAGE
             avg_header = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
             avg_content = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
             avg_number = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
             avg_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
+
+            autofit = _enable_autofit(sheet, font_size=FONT_SIZE-1)
+            sheet.set_default_row(15)
 
             # ================= OVEN LIST =================
             oven_list = []
@@ -1017,14 +1122,14 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 bongkar, menjadi = repack_data[0]
 
                 if bongkar != "BONGKAR: -":
-                    sheet.merge_range(footer_row, 0, footer_row, last_col, bongkar)
+                    sheet.merge_range(footer_row, 0, footer_row, last_col, bongkar, fmt_repack)
                     footer_row += 1
 
                 if menjadi != "MENJADI: -":
-                    sheet.merge_range(footer_row, 0, footer_row, last_col, menjadi)
+                    sheet.merge_range(footer_row, 0, footer_row, last_col, menjadi, fmt_repack)
                     footer_row += 1
             
-            sheet.autofit()
+            autofit()
 
         # =========================================================
         # CASE 1 : SINGLE WAREHOUSE
