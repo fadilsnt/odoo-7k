@@ -138,8 +138,16 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     bm.lubang_setom,
                     bm.bongkaran,
                     bm.asumsi_berat_ikat, 
-                    bm.product_id,                   
+                    bm.product_id,
+
                     pt.name->>'id_ID' AS product,
+                    CASE
+                        WHEN pc.name = 'EXPORT'
+                                AND NULLIF(TRIM(pp.default_code), '') IS NOT NULL
+                        THEN SPLIT_PART(TRIM(pp.default_code), ' ', 1)
+                        ELSE pt.name->>'id_ID'
+                    END AS product_code,
+                    
                     pt.is_cl AS is_cl,
                     pc.name AS product_category,
                     uu.name->>'id_ID' AS uom_category,
@@ -178,8 +186,16 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     bm.lubang_setom,
                     bm.bongkaran,
                     bm.asumsi_berat_ikat,    
-                    bm.product_id,                
+                    bm.product_id,
+
                     pt.name->>'id_ID',
+                    CASE
+                        WHEN pc.name = 'EXPORT'
+                                AND NULLIF(TRIM(pp.default_code), '') IS NOT NULL
+                        THEN SPLIT_PART(TRIM(pp.default_code), ' ', 1)
+                        ELSE pt.name->>'id_ID'
+                    END,
+                    
                     pt.is_cl,
                     pc.name,
                     uu.name->>'id_ID',
@@ -215,6 +231,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     json_agg(
                         json_build_object(
                             'product', product,
+                            'product_code', product_code,
                             'qty', qty,
                             'tonase', tonase,
                             'weight_per_product_attribute', weight_per_product_attribute,
@@ -634,7 +651,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 total_per_oven.setdefault(oven_key, 0)
 
                 for p in o.get("products", []):
-                    product = p.get("product")
+                    product = p.get("product_code") or p.get("product")
                     qty = p.get("qty", 0)
                     weight = p.get("weight_per_product_attribute", 0)             
                     tonase = p.get("tonase")       
@@ -958,20 +975,20 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
             sheet.write(grade_row + 1, grade_col_start + 3, "RATA-RATA", fmt_header)
 
 
-            # ================= COLUMN WIDTH =================
-            sheet.set_column(0, 0, 25)  # PICKING / GRADE
+            # # ================= COLUMN WIDTH =================
+            # sheet.set_column(0, 0, 25)  # PICKING / GRADE
 
-            col_idx = 1
-            for _ in range(total_oven):
-                sheet.set_column(col_idx, col_idx, 7)      # QTY oven
-                sheet.set_column(col_idx + 1, col_idx + 1, 18)  # PRODUK oven
-                col_idx += 2
+            # col_idx = 1
+            # for _ in range(total_oven):
+            #     sheet.set_column(col_idx, col_idx, 7)      # QTY oven
+            #     sheet.set_column(col_idx + 1, col_idx + 1, 18)  # PRODUK oven
+            #     col_idx += 2
 
-            # ===== KOLOM KANAN (SUMMARY GRADE) =====
-            sheet.set_column(grade_col_start, grade_col_start, 40)       # PRODUK (A | B | D)
-            sheet.set_column(grade_col_start + 1, grade_col_start + 1, 25)  # QTY (2 | 4 | 6)
-            sheet.set_column(grade_col_start + 2, grade_col_start + 2, 10)  # TOTAL
-            sheet.set_column(grade_col_start + 3, grade_col_start + 3, 15)  # GRADE
+            # # ===== KOLOM KANAN (SUMMARY GRADE) =====
+            # sheet.set_column(grade_col_start, grade_col_start, 40)       # PRODUK (A | B | D)
+            # sheet.set_column(grade_col_start + 1, grade_col_start + 1, 25)  # QTY (2 | 4 | 6)
+            # sheet.set_column(grade_col_start + 2, grade_col_start + 2, 10)  # TOTAL
+            # sheet.set_column(grade_col_start + 3, grade_col_start + 3, 15)  # GRADE
 
             # ================= JENIS ROW =================
             jenis_row = grade_row + 1
@@ -1006,6 +1023,8 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 if menjadi != "MENJADI: -":
                     sheet.merge_range(footer_row, 0, footer_row, last_col, menjadi)
                     footer_row += 1
+            
+            sheet.autofit()
 
         # =========================================================
         # CASE 1 : SINGLE WAREHOUSE

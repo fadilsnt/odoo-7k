@@ -312,24 +312,34 @@ class PackingSummaryWizard(models.TransientModel):
             })
             grade_data = warehouse_data['grades'].setdefault(grade, {'items': []})
 
-            key = (warehouse, grade, row['weight_per_product_attribute'], row['tonase_asli'])
+            key = (warehouse, grade, row['weight_per_product_attribute'])
             item = item_index.get(key)
             if item is None:
                 item = {
                     'weight_per_product_attribute': row['weight_per_product_attribute'],
-                    'tonase_asli': row['tonase_asli'],
+                    'tonase_asli': 0.0,
                     'qty': 0,
                     'boxes': {},
+                    '_tonase_values': set(),
                 }
                 item_index[key] = item
                 grade_data['items'].append(item)
-
+ 
             qty = float(row['qty'] or 0)
             item['qty'] += qty
-
+            item['_tonase_values'].add(float(row['tonase_asli'] or 0))
+ 
             box_label = self._clean_box_label(row['box_label'])
             box = item['boxes'].setdefault(box_label.upper(), {'label': box_label, 'qty': 0})
             box['qty'] += qty
+ 
+        # RATA-RATA TONASE ASLI
+        for warehouse_data in result.values():
+            for grade_data in warehouse_data['grades'].values():
+                for item in grade_data['items']:
+                    values = item.pop('_tonase_values')
+                    filled = [v for v in values if v]
+                    item['tonase_asli'] = sum(filled) / len(filled) if filled else 0.0
 
         try:
             pretty_json = json.dumps(result, indent=2, ensure_ascii=False, default=str)
