@@ -17,6 +17,7 @@
                             <field name="is_all_warehouse"/>
                         </div>
                         <field name="report_type" widget="radio" options="{'horizontal': true}"/>
+                        <field name="ungroup_tonase_asli"/>
                     </group>
                     <group>
                         <label for="start_date" string="Date"/>

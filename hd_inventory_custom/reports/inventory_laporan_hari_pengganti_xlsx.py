@@ -579,7 +579,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
         _logger.info("Repack Data %s", repack_data)
 
-        FONT_SIZE = 15
+        FONT_SIZE = 16
         _orig_add_format = workbook.add_format
 
         def _add_format(props=None):
@@ -1404,11 +1404,11 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 bongkar, menjadi = repack_data[0]
 
                 if bongkar != "BONGKAR: -":
-                    sheet.merge_range(repack_row, 17, repack_row, 18, bongkar, fmt_repack)
+                    sheet.write(repack_row, 17, bongkar, fmt_repack)
                     repack_row += 1
 
                 if menjadi != "MENJADI: -":
-                    sheet.merge_range(repack_row, 17, repack_row, 18, menjadi, fmt_repack)
+                    sheet.write(repack_row, 17, menjadi, fmt_repack)
                     repack_row += 1
 
             def get_qty_per_uom(product, warehouse_id, current_max_date):

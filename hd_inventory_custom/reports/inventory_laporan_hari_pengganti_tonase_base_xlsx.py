@@ -561,7 +561,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
         _logger.info("Repack Data %s", repack_data)
 
-        FONT_SIZE = 15
+        FONT_SIZE = 16
         _orig_add_format = workbook.add_format
 
         def _add_format(props=None):

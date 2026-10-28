@@ -33,6 +33,7 @@ class PackingSummaryWizard(models.TransientModel):
         ('branch', 'Cabang'),
     ], string="Jenis Laporan", default='main', required=True)
     grade_value_ids = fields.Many2many('product.attribute.value', 'rel_packing_summary_grade_value_ids', 'wizard_id', 'grade_value_id', string="Attribute Values", domain="[('attribute_id.name', 'in', ['grade','Grade','GRADE'])]")
+    ungroup_tonase_asli = fields.Boolean(string="Ungroup Tonase Asli", default=False)
     file = fields.Binary('File')
 
     @staticmethod
@@ -312,34 +313,50 @@ class PackingSummaryWizard(models.TransientModel):
             })
             grade_data = warehouse_data['grades'].setdefault(grade, {'items': []})
 
-            key = (warehouse, grade, row['weight_per_product_attribute'])
-            item = item_index.get(key)
-            if item is None:
-                item = {
-                    'weight_per_product_attribute': row['weight_per_product_attribute'],
-                    'tonase_asli': 0.0,
-                    'qty': 0,
-                    'boxes': {},
-                    '_tonase_values': set(),
-                }
-                item_index[key] = item
-                grade_data['items'].append(item)
- 
-            qty = float(row['qty'] or 0)
-            item['qty'] += qty
-            item['_tonase_values'].add(float(row['tonase_asli'] or 0))
+            if self.ungroup_tonase_asli:
+                key = (warehouse, grade, row['weight_per_product_attribute'])
+                item = item_index.get(key)
+                if item is None:
+                    item = {
+                        'weight_per_product_attribute': row['weight_per_product_attribute'],
+                        'tonase_asli': 0.0,
+                        'qty': 0,
+                        'boxes': {},
+                        '_tonase_values': set(),
+                    }
+                    item_index[key] = item
+                    grade_data['items'].append(item)
+    
+                qty = float(row['qty'] or 0)
+                item['qty'] += qty
+                item['_tonase_values'].add(float(row['tonase_asli'] or 0))
+            else:
+                key = (warehouse, grade, row['weight_per_product_attribute'], row['tonase_asli'])
+                item = item_index.get(key)
+                if item is None:
+                    item = {
+                        'weight_per_product_attribute': row['weight_per_product_attribute'],
+                        'tonase_asli': row['tonase_asli'],
+                        'qty': 0,
+                        'boxes': {},
+                    }
+                    item_index[key] = item
+                    grade_data['items'].append(item)
+    
+                qty = float(row['qty'] or 0)
+                item['qty'] += qty
  
             box_label = self._clean_box_label(row['box_label'])
             box = item['boxes'].setdefault(box_label.upper(), {'label': box_label, 'qty': 0})
             box['qty'] += qty
- 
-        # RATA-RATA TONASE ASLI
-        for warehouse_data in result.values():
-            for grade_data in warehouse_data['grades'].values():
-                for item in grade_data['items']:
-                    values = item.pop('_tonase_values')
-                    filled = [v for v in values if v]
-                    item['tonase_asli'] = sum(filled) / len(filled) if filled else 0.0
+
+        if self.ungroup_tonase_asli:
+            for warehouse_data in result.values():
+                for grade_data in warehouse_data['grades'].values():
+                    for item in grade_data['items']:
+                        values = item.pop('_tonase_values')
+                        filled = [v for v in values if v]
+                        item['tonase_asli'] = sum(filled) / len(filled) if filled else 0.0
 
         try:
             pretty_json = json.dumps(result, indent=2, ensure_ascii=False, default=str)
@@ -391,6 +408,10 @@ class PackingSummaryWizard(models.TransientModel):
         number_center = workbook.add_format({'valign':'vcenter', 'align':'center', 'num_format':'#,##0.0'})
         number_center.set_font_size('12')
         number_center.set_border()
+        #################################################################################
+        decimal_center = workbook.add_format({'valign':'vcenter', 'align':'center', 'num_format':'#,##0.00'})
+        decimal_center.set_font_size('12')
+        decimal_center.set_border()
         #################################################################################
         number_right = workbook.add_format({'valign':'vcenter', 'align':'right', 'num_format':'#,##0.0'})
         number_right.set_font_size('12')
@@ -527,11 +548,11 @@ class PackingSummaryWizard(models.TransientModel):
 
                     worksheet1.write(i, 2, quantity, integer_right)
                     worksheet1.write(i, 3, avg_quantity, number_right)
-                    worksheet1.write(i, 4, weight, number_center)
+                    worksheet1.write(i, 4, weight, decimal_center)
                     worksheet1.write(i, 5, total_packing, integer_right)
                     worksheet1.write(i, 6, percent_packing, number_center)
                     worksheet1.write(i, 7, avg_oven, number_right)
-                    worksheet1.write(i, 8, tonase_asli, number_center)
+                    worksheet1.write(i, 8, tonase_asli, decimal_center)
                     worksheet1.write(i, 9, tonase_packing, integer_right)
                     worksheet1.write(i, 10, percent_tonase_packing, number_center)
                     worksheet1.write(i, 11, avg_tonase_oven, number_right)
