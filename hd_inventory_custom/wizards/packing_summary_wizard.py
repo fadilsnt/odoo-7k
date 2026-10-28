@@ -303,54 +303,46 @@ class PackingSummaryWizard(models.TransientModel):
 
         result = {}
         item_index = {}
+        ungroup = bool(self.ungroup_tonase_asli)
+ 
         for row in rows:
             warehouse = row['warehouse']
             grade = row['grade']
-
+ 
             warehouse_data = result.setdefault(warehouse, {
                 'total_oven': row['total_oven'],
                 'grades': {},
             })
             grade_data = warehouse_data['grades'].setdefault(grade, {'items': []})
-
-            if self.ungroup_tonase_asli:
+ 
+            if ungroup:
                 key = (warehouse, grade, row['weight_per_product_attribute'])
-                item = item_index.get(key)
-                if item is None:
-                    item = {
-                        'weight_per_product_attribute': row['weight_per_product_attribute'],
-                        'tonase_asli': 0.0,
-                        'qty': 0,
-                        'boxes': {},
-                        '_tonase_values': set(),
-                    }
-                    item_index[key] = item
-                    grade_data['items'].append(item)
-    
-                qty = float(row['qty'] or 0)
-                item['qty'] += qty
-                item['_tonase_values'].add(float(row['tonase_asli'] or 0))
             else:
                 key = (warehouse, grade, row['weight_per_product_attribute'], row['tonase_asli'])
-                item = item_index.get(key)
-                if item is None:
-                    item = {
-                        'weight_per_product_attribute': row['weight_per_product_attribute'],
-                        'tonase_asli': row['tonase_asli'],
-                        'qty': 0,
-                        'boxes': {},
-                    }
-                    item_index[key] = item
-                    grade_data['items'].append(item)
-    
-                qty = float(row['qty'] or 0)
-                item['qty'] += qty
+ 
+            item = item_index.get(key)
+            if item is None:
+                item = {
+                    'weight_per_product_attribute': row['weight_per_product_attribute'],
+                    'tonase_asli': 0.0 if ungroup else row['tonase_asli'],
+                    'qty': 0,
+                    'boxes': {},
+                }
+                if ungroup:
+                    item['_tonase_values'] = set()
+                item_index[key] = item
+                grade_data['items'].append(item)
+ 
+            qty = float(row['qty'] or 0)
+            item['qty'] += qty
+            if ungroup:
+                item['_tonase_values'].add(float(row['tonase_asli'] or 0))
  
             box_label = self._clean_box_label(row['box_label'])
             box = item['boxes'].setdefault(box_label.upper(), {'label': box_label, 'qty': 0})
             box['qty'] += qty
-
-        if self.ungroup_tonase_asli:
+ 
+        if ungroup:
             for warehouse_data in result.values():
                 for grade_data in warehouse_data['grades'].values():
                     for item in grade_data['items']:
@@ -358,12 +350,16 @@ class PackingSummaryWizard(models.TransientModel):
                         filled = [v for v in values if v]
                         item['tonase_asli'] = sum(filled) / len(filled) if filled else 0.0
 
+                    # grade_data['items'].sort(
+                    #     key=lambda it: float(it['weight_per_product_attribute'] or 0)
+                    # )
+ 
         try:
             pretty_json = json.dumps(result, indent=2, ensure_ascii=False, default=str)
             _logger.debug("Isi Report Data:\n%s", pretty_json)
         except Exception as e:
             _logger.error("Gagal membuat JSON report: %s", e)
-
+ 
         return result
 
     def button_print(self):
