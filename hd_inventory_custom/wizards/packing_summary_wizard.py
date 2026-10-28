@@ -644,7 +644,7 @@ class PackingSummaryWizard(models.TransientModel):
                 })
             
             branch_rows.sort(
-                key=lambda r: (round(r['total_avg'], 1), r['total_box'], r['total_tonase']),
+                key=lambda r: (r['total_box'], round(r['total_avg'], 1)),
                 reverse=True,
             )
 
