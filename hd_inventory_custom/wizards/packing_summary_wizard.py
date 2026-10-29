@@ -315,7 +315,7 @@ class PackingSummaryWizard(models.TransientModel):
             })
             grade_data = warehouse_data['grades'].setdefault(grade, {'items': []})
  
-            if ungroup:
+            if not ungroup:
                 key = (warehouse, grade, row['weight_per_product_attribute'])
             else:
                 key = (warehouse, grade, row['weight_per_product_attribute'], row['tonase_asli'])
@@ -324,25 +324,25 @@ class PackingSummaryWizard(models.TransientModel):
             if item is None:
                 item = {
                     'weight_per_product_attribute': row['weight_per_product_attribute'],
-                    'tonase_asli': 0.0 if ungroup else row['tonase_asli'],
+                    'tonase_asli': 0.0 if not ungroup else row['tonase_asli'],
                     'qty': 0,
                     'boxes': {},
                 }
-                if ungroup:
+                if not ungroup:
                     item['_tonase_values'] = set()
                 item_index[key] = item
                 grade_data['items'].append(item)
  
             qty = float(row['qty'] or 0)
             item['qty'] += qty
-            if ungroup:
+            if not ungroup:
                 item['_tonase_values'].add(float(row['tonase_asli'] or 0))
  
             box_label = self._clean_box_label(row['box_label'])
             box = item['boxes'].setdefault(box_label.upper(), {'label': box_label, 'qty': 0})
             box['qty'] += qty
  
-        if ungroup:
+        if not ungroup:
             for warehouse_data in result.values():
                 for grade_data in warehouse_data['grades'].values():
                     for item in grade_data['items']:
