@@ -619,8 +619,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             avg_number = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
             avg_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
 
-            autofit = _enable_autofit(sheet, font_size=FONT_SIZE-1)
-            sheet.set_default_row(15)
+            autofit = _enable_autofit(sheet, font_size=FONT_SIZE)
+            sheet.set_default_row(15.75)
             
             # ================= OVEN LIST =================
             oven_list = []
@@ -1002,7 +1002,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                                 continue
 
                             for p in o.get("products", []):
-                                product = p.get("product")
+                                product = p.get("product_code") or p.get("product")
                                 qty = p.get("qty", 0)
                                 uom = o.get("uom_category")
                                 weight = p.get("weight_per_product_attribute", 0)
@@ -1521,6 +1521,13 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 sheet, elf_row, "AVALAN", "AVALAN", warehouse_id, current_max_date,
                 fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
             )
+
+            _logger.warning(">>> SET ROW HEIGHT 15.01 sheet=%s rows=%s", sheet.get_name(), elf_row + 100)
+            for r in range(0, elf_row + 100):
+                sheet.set_row(r, 15.01)
+
+            for r in range(0, elf_row + 5):
+                sheet.set_row(r, 15.75)
 
             autofit()
 

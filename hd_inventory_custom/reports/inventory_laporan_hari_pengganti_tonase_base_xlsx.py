@@ -596,8 +596,8 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
             avg_number = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
             avg_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
 
-            autofit = _enable_autofit(sheet, font_size=FONT_SIZE-1)
-            sheet.set_default_row(15)
+            autofit = _enable_autofit(sheet, font_size=FONT_SIZE)
+            sheet.set_default_row(15.75)
 
             # ================= OVEN LIST =================
             oven_list = []
@@ -978,7 +978,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                                 continue
 
                             for p in o.get("products", []):
-                                product = p.get("product")
+                                product = p.get("product_code") or p.get("product")
                                 qty = p.get("qty", 0)
                                 uom = o.get("uom_category")
                                 tonase = p.get("tonase") or 1
@@ -1129,6 +1129,9 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                     sheet.merge_range(footer_row, 0, footer_row, last_col, menjadi, fmt_repack)
                     footer_row += 1
             
+            for r in range(0, footer_row + 5):
+                sheet.set_row(r, 15.75)
+
             autofit()
 
         # =========================================================
