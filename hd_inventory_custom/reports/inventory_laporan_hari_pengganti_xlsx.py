@@ -1425,13 +1425,13 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 for move in moves:
                     uom = move.product_uom
-                    is_incoming = move.location_dest_id.usage == 'internal' and move.location_id.usage != 'internal'
-                    is_outgoing = move.location_id.usage == 'internal' and move.location_dest_id.usage != 'internal'
+                    is_incoming = move.location_dest_id.warehouse_id and move.location_dest_id.warehouse_id.id == warehouse_id and move.location_dest_id.usage == 'internal'
+                    is_outgoing = move.location_id.warehouse_id and move.location_id.warehouse_id.id == warehouse_id and move.location_id.usage == 'internal'
 
-                    if is_incoming:
-                        uom_data[uom]['qty'] += move.product_uom_qty
-                    elif is_outgoing:
-                        uom_data[uom]['qty'] -= move.product_uom_qty
+                    if is_incoming and not is_outgoing:
+                        uom_data[uom]['qty'] += move.quantity or move.product_uom_qty
+                    elif is_outgoing and not is_incoming:
+                        uom_data[uom]['qty'] -= move.quantity or move.product_uom_qty
 
                     uom_data[uom]['weight'] = uom.weight_per_uom_category or 0.0
 
