@@ -2,6 +2,7 @@ from odoo import models
 from datetime import datetime, time, date, timedelta
 from itertools import groupby
 from collections import defaultdict
+from odoo.exceptions import ValidationError
 import re
 import json
 import logging
@@ -656,74 +657,120 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 col += 2
             
             # ================= RATA-RATA / KOTAK =================
+            MAX_RATA_ROWS = 6
             if grade_names:
                 rata_col_label = grade_col_start
                 rata_col_value = grade_col_start + 1
                 rata_col_kotak = grade_col_start + 2
-
-                sheet.merge_range(header_row, rata_col_label, header_row, rata_col_value, "RATA - RATA", avg_header)
+ 
+                rata_top = header_row - 1
+ 
+                def _box_sort(label):
+                    m = re.search(r'\d+(?:[.,]\d+)?', label or "")
+                    return (float(m.group().replace(',', '.')) if m else 9999.0, label or "")
+ 
+                def _rata_label(grade_name, box_label):
+                    m = re.search(r'\d+(?:[.,]\d+)?', box_label or "")
+                    if not m:
+                        return f"{grade_name} ({box_label})" if box_label else grade_name
+                    size = float(m.group().replace(',', '.'))
+                    size_str = str(int(size)) if size == int(size) else m.group()
+                    return f"{grade_name}{size_str}"
+ 
+                rata_map = {}
+                for o in ovens:
+                    classification = o.get("classification") or ""
+                    if not classification:
+                        continue
+ 
+                    grade_key = classification.split(' (')[0].strip()
+                    if grade_key not in grade_names:
+                        continue
+ 
+                    m = re.search(r'\((.*)\)\s*$', classification)
+                    box_label = m.group(1).strip() if m else ""
+ 
+                    entry = rata_map.setdefault(
+                        (grade_key, box_label),
+                        {"avg": 0.0, "kotak": 0.0, "ovens": set()}
+                    )
+                    entry["ovens"].add(_get_oven_key(o.get("oven"), o.get("production_date")))
+ 
+                    for p in o.get("products", []):
+                        product_name = (p.get("product") or "").strip()
+                        qty = p.get("qty", 0) or 0
+ 
+                        if product_name.lower().startswith("kotak"):
+                            entry["kotak"] += qty
+                        else:
+                            entry["avg"] += qty
+ 
+                rata_rows = []
+                for grade_name in grade_names:
+                    boxes = sorted(
+                        [b for (g, b) in rata_map.keys() if g == grade_name],
+                        key=_box_sort
+                    )
+                    if boxes:
+                        for b in boxes:
+                            rata_rows.append((_rata_label(grade_name, b), rata_map[(grade_name, b)]))
+                    else:
+                        rata_rows.append((grade_name, None))
+ 
+                if len(rata_rows) > MAX_RATA_ROWS:
+                    detail = "\n".join(f"{i}. {label}" for i, (label, _e) in enumerate(rata_rows, 1))
+                    raise ValidationError(
+                        f"Tabel RATA-RATA (sheet '{warehouse_name}') melebihi batas "
+                        f"{MAX_RATA_ROWS} baris.\n\n"
+                        f"Grade yang dipilih pada wizard dipecah per ukuran box "
+                        f"menjadi {len(rata_rows)} baris:\n{detail}\n\n"
+                        f"Silakan kurangi jumlah grade yang dipilih pada wizard "
+                        f"hingga maksimal {MAX_RATA_ROWS} baris, lalu cetak ulang laporan."
+                    )
+ 
+                if entry_total_oven is not None and entry_total_oven > 0:
+                    base_oven_count = entry_total_oven
+                else:
+                    base_oven_count = total_oven or 1
+ 
+                sheet.merge_range(rata_top, rata_col_label, rata_top, rata_col_value, "RATA - RATA", avg_header)
                 if is_kotak:
-                    sheet.write(header_row, rata_col_kotak, "KOTAK", avg_header)
-
-                rata_row = header_row + 1
+                    sheet.write(rata_top, rata_col_kotak, "KOTAK", avg_header)
+ 
+                rata_row = rata_top + 1
                 avg_values = []
                 kotak_values = []
-
-                if entry_total_oven is not None and entry_total_oven > 0:
-                    oven_count = entry_total_oven
-                else:
-                    oven_count = total_oven or 1
-                
-                for grade_name in grade_names:
-                    avg_total_qty = 0.0
-                    kotak_total_qty = 0.0
-
-                    oven_grade_list = []
-                    for o in ovens:
-                        classification = o.get("classification") or "UNCLASSIFIED"
-                        grade_key = classification.split(' (')[0].strip()
-
-                        if grade_key != grade_name:
-                            continue
-
-                        oven_grade_key = _get_oven_key(o.get("oven"), o.get("production_date"))
-                        if oven_grade_key not in oven_grade_list:
-                            oven_grade_list.append(oven_grade_key)
-
-                        for p in o.get("products", []):
-                            product_name = (p.get("product") or "").strip()
-                            qty = p.get("qty", 0) or 0
-
-                            if product_name.lower().startswith("kotak"):
-                                kotak_total_qty += qty
+ 
+                for label, entry in rata_rows:
+                    sheet.write(rata_row, rata_col_label, label, avg_content)
+ 
+                    if entry:
+                        oven_count = (len(entry["ovens"]) or 1) if average_by_grade else base_oven_count
+ 
+                        if entry["avg"]:
+                            avg_val = round(entry["avg"] / oven_count, 2)
+                            sheet.write(rata_row, rata_col_value, avg_val, avg_number)
+                            avg_values.append(avg_val)
+                        else:
+                            sheet.write(rata_row, rata_col_value, "-", avg_number)
+ 
+                        if is_kotak:
+                            if entry["kotak"]:
+                                kotak_val = round(entry["kotak"] / oven_count, 2)
+                                sheet.write(rata_row, rata_col_kotak, kotak_val, avg_number)
+                                kotak_values.append(kotak_val)
                             else:
-                                avg_total_qty += qty
-                    
-                    if average_by_grade:
-                        oven_count = len(oven_grade_list) or 1
-
-                    sheet.write(rata_row, rata_col_label, grade_name, avg_content)
-
-                    if avg_total_qty:
-                        avg_val = round(avg_total_qty / oven_count, 2)
-                        sheet.write(rata_row, rata_col_value, avg_val, avg_number)
-                        avg_values.append(avg_val)
+                                sheet.write(rata_row, rata_col_kotak, "-", avg_number)
                     else:
                         sheet.write(rata_row, rata_col_value, "-", avg_number)
-
-                    if is_kotak:
-                        if kotak_total_qty:
-                            kotak_val = round(kotak_total_qty / oven_count, 2)
-                            sheet.write(rata_row, rata_col_kotak, kotak_val, avg_number)
-                            kotak_values.append(kotak_val)
-                        else:
+                        if is_kotak:
                             sheet.write(rata_row, rata_col_kotak, "-", avg_number)
-
+ 
                     rata_row += 1
-
+ 
                 total_avg = round(sum(avg_values), 2) if avg_values else 0.0
                 total_kotak = round(sum(kotak_values), 2) if kotak_values else 0.0
-
+ 
                 sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_header)
                 sheet.write(rata_row, rata_col_value, total_avg if total_avg else "-", avg_total)
                 if is_kotak:

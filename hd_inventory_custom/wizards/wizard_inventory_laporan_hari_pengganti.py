@@ -22,9 +22,6 @@ class WizardInventoryLaporanHariPengganti(models.TransientModel):
     def action_print_xlsx_report(self):
         self.ensure_one()
 
-        if len(self.grade_value_ids) > 5:
-            raise UserError("Max 5 Grade Value for Average !")
-
         report_date = self.date.strftime('%d-%m-%Y')
         warehouse_name = self.warehouse_id.name if self.warehouse_id else 'Semua Gudang'
         filename = f"Laporan Harian {warehouse_name} - {report_date}"
