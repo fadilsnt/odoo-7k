@@ -619,7 +619,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             avg_number = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
             avg_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
 
-            autofit = _enable_autofit(sheet, font_size=FONT_SIZE)
+            autofit = _enable_autofit(sheet, font_size=FONT_SIZE, skip_prefixes=("BONGKAR:", "MENJADI:"))
             sheet.set_default_row(15.75)
             
             # ================= OVEN LIST =================
@@ -1273,7 +1273,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 for ptav in variant.product_template_attribute_value_ids:
                     if ptav.attribute_id.name.lower() == attr_name.lower():
                         return ptav
-                
+
                 return self.env['product.template.attribute.value']
 
             export_data = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
@@ -1318,99 +1318,122 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 if cont_rate:
                     cont_data[box][desain][grade] += (qty / cont_rate)
 
-
-            cont_gt_export = 0.0
-
-            sorted_boxes = sorted(export_data.keys(), key=lambda b: box_weight_map.get(b, 0.0))
-            for box in sorted_boxes:
-
+            # ---------------------------------------------------------
+            # 1. GET BOX HEIGHT & WIDTH
+            # ---------------------------------------------------------
+            box_infos = []
+            for box in sorted(export_data.keys(), key=lambda b: box_weight_map.get(b, 0.0)):
                 desain_dict = export_data[box]
-                
+
                 grade_totals = defaultdict(float)
                 for desain, grade_qty in desain_dict.items():
                     for grade, qty in grade_qty.items():
                         grade_totals[grade] += qty
 
-                grades = sorted((g for g, total in grade_totals.items() if total != 0), key=lambda g: (g == 'FUEL', g))
+                grades = sorted(
+                    (g for g, total in grade_totals.items() if total != 0),
+                    key=lambda g: (g == 'FUEL', g)
+                )
                 if not grades:
                     continue
 
-                valid_box = {}
-                for desain, grade_qty in desain_dict.items():
-                    valid_qty = sum(grade_qty.get(grade, 0.0) for grade in grades)
-                    if valid_qty != 0:
-                        valid_box[desain] = valid_qty
-
-                if not valid_box:
+                valid_rows = [
+                    (desain, grade_qty)
+                    for desain, grade_qty in desain_dict.items()
+                    if sum(grade_qty.get(g, 0.0) for g in grades) != 0
+                ]
+                if not valid_rows:
                     continue
 
-                sheet.merge_range(elf_row, elf_col, elf_row, elf_col + len(grades) + 2, box, fmt_header)
-                elf_row += 1
+                box_infos.append({
+                    'box': box,
+                    'grades': grades,
+                    'rows': valid_rows,
+                    'width': len(grades) + 3,
+                })
 
-                sheet.write(elf_row, elf_col, "DESAIN", fmt_header)
+            # ---------------------------------------------------------
+            # 2. WRITE BOX
+            # ---------------------------------------------------------
+            def _write_box(info, start_row):
+                box = info['box']
+                grades = info['grades']
+                n = len(grades)
+                r = start_row
+
+                sheet.merge_range(r, elf_col, r, elf_col + n + 2, box, fmt_header)
+                r += 1
+
+                sheet.write(r, elf_col, "DESAIN", fmt_header)
                 for i, grade in enumerate(grades):
-                    sheet.write(elf_row, elf_col + i + 1, grade, fmt_header)
-                sheet.write(elf_row, elf_col + len(grades) + 1, "TOTAL", fmt_header)
-                sheet.write(elf_row, elf_col + len(grades) + 2, "CONT", fmt_header)
-                elf_row += 1
+                    sheet.write(r, elf_col + i + 1, grade, fmt_header)
+                sheet.write(r, elf_col + n + 1, "TOTAL", fmt_header)
+                sheet.write(r, elf_col + n + 2, "CONT", fmt_header)
+                r += 1
 
                 total_per_grade = defaultdict(float)
                 cont_per_grade = defaultdict(float)
                 grand_total_export = 0.0
                 cont_total_export = 0.0
 
-                for desain, grade_qty in desain_dict.items():
-                    row_total = sum(grade_qty.get(grade, 0.0) for grade in grades)
-                    if row_total != 0:
-                        sheet.write(elf_row, elf_col, desain, fmt_text_left)
+                for desain, grade_qty in info['rows']:
+                    row_total = sum(grade_qty.get(g, 0.0) for g in grades)
+                    sheet.write(r, elf_col, desain, fmt_text_left)
 
-                        row_cont_result = 0.0
-                        for i, grade in enumerate(grades):
-                            qty = grade_qty.get(grade, 0.0)
-                            sheet.write(elf_row, elf_col + i + 1, qty if qty != 0 else "-", fmt_num)
-                            total_per_grade[grade] += qty
+                    row_cont_result = 0.0
+                    for i, grade in enumerate(grades):
+                        qty = grade_qty.get(grade, 0.0)
+                        sheet.write(r, elf_col + i + 1, qty if qty != 0 else "-", fmt_num)
+                        total_per_grade[grade] += qty
 
-                            cont_contrib = cont_data.get(box, {}).get(desain, {}).get(grade, 0.0)
-                            cont_per_grade[grade] += cont_contrib
-                            row_cont_result += cont_contrib
+                        cont_contrib = cont_data.get(box, {}).get(desain, {}).get(grade, 0.0)
+                        cont_per_grade[grade] += cont_contrib
+                        row_cont_result += cont_contrib
 
-                        sheet.write(elf_row, elf_col + len(grades) + 1, row_total if row_total != 0 else "-", fmt_num)
-                        sheet.write(elf_row, elf_col + len(grades) + 2, row_cont_result if row_cont_result != 0 else "-", fmt_cont_bold)
+                    sheet.write(r, elf_col + n + 1, row_total, fmt_num)
+                    sheet.write(r, elf_col + n + 2, row_cont_result if row_cont_result != 0 else "-", fmt_cont_bold)
 
-                        grand_total_export += row_total
-                        cont_total_export += row_cont_result
-                        elf_row += 1
+                    grand_total_export += row_total
+                    cont_total_export += row_cont_result
+                    r += 1
 
-                sheet.write(elf_row, elf_col, "TOTAL", fmt_header)
-                sheet.write(elf_row + 1, elf_col, "CONT", fmt_header)
+                sheet.write(r, elf_col, "TOTAL", fmt_header)
+                sheet.write(r + 1, elf_col, "CONT", fmt_header)
                 for i, grade in enumerate(grades):
-                    sheet.write(elf_row, elf_col + i + 1, total_per_grade[grade] if total_per_grade[grade] != 0 else "-", fmt_num_bold)
-                    sheet.write(elf_row + 1, elf_col + i + 1, cont_per_grade[grade] if cont_per_grade[grade] != 0 else "-", fmt_cont_bold)
-                
-                sheet.write(elf_row + 1, elf_col + len(grades) + 1, cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
-                sheet.write(elf_row, elf_col + len(grades) + 1, grand_total_export if grand_total_export != 0 else "-", fmt_num_bold)
-                sheet.merge_range(elf_row, elf_col + len(grades) + 2, elf_row + 1, elf_col + len(grades) + 2, cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
-                elf_row += 3
+                    sheet.write(r, elf_col + i + 1, total_per_grade[grade] if total_per_grade[grade] != 0 else "-", fmt_num_bold)
+                    sheet.write(r + 1, elf_col + i + 1, cont_per_grade[grade] if cont_per_grade[grade] != 0 else "-", fmt_cont_bold)
 
-                cont_gt_export += cont_total_export
+                sheet.write(r, elf_col + n + 1, grand_total_export if grand_total_export != 0 else "-", fmt_num_bold)
+                sheet.write(r + 1, elf_col + n + 1, cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
+                sheet.merge_range(r, elf_col + n + 2, r + 1, elf_col + n + 2,
+                                  cont_total_export if cont_total_export != 0 else "-", fmt_cont_bold)
 
-            gt_export_row = elf_row
-            sheet.merge_range(gt_export_row, 17, gt_export_row, 18, "TOTAL BOX EXPORT", fmt_header)
-            sheet.write(gt_export_row + 1, 17, "CONT", fmt_header)
-            sheet.write(gt_export_row + 1, 18, cont_gt_export if cont_gt_export != 0 else "-", fmt_cont_bold)
-            
-            repack_row = elf_row + 3
-            if repack_data:
-                bongkar, menjadi = repack_data[0]
+                return r + 3, cont_total_export
 
-                if bongkar != "BONGKAR: -":
-                    sheet.write(repack_row, 17, bongkar, fmt_repack)
-                    repack_row += 1
+            SIDE_WIDTH = 4
+            cont_gt_export = 0.0
+            side_row = elf_row
+            side_col = elf_col
 
-                if menjadi != "MENJADI: -":
-                    sheet.write(repack_row, 17, menjadi, fmt_repack)
-                    repack_row += 1
+            if box_infos:
+                widest = max(box_infos, key=lambda i: i['width'])
+                widest_idx = box_infos.index(widest)
 
+                for idx, info in enumerate(box_infos):
+                    elf_row, cont = _write_box(info, elf_row)
+                    cont_gt_export += cont
+
+                    if idx == widest_idx:
+                        side_row = elf_row
+
+                after = box_infos[widest_idx + 1:]
+                left_needed = (elf_col + max(i['width'] for i in after) + 1) if after else elf_col
+
+                side_col = left_needed
+
+            # ---------------------------------------------------------
+            # 4. KARTU STOK LOKAL / SCRAP / AVALAN
+            # ---------------------------------------------------------
             def get_qty_per_uom(product, warehouse_id, current_max_date):
                 moves = product.stock_move_ids.filtered(
                     lambda m: m.state not in ('draft', 'cancel')
@@ -1437,9 +1460,9 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
                 return uom_data
 
-
-            def write_category_section(sheet, elf_row, label, category_name, warehouse_id, current_max_date,
-                            fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold):
+            def write_category_section(sheet, start_row, start_col, label, category_name,
+                                       warehouse_id, current_max_date,
+                                       fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold):
 
                 self._cr.execute(
                     """
@@ -1483,44 +1506,64 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                             grand_total += total
 
                 if not rows:
-                    return elf_row
+                    return start_row
 
-                sheet.merge_range(elf_row, 12, elf_row, 15, label, fmt_label)
-                elf_row += 1
-                sheet.write(elf_row, 12, "DESAIN", fmt_header)
-                sheet.write(elf_row, 13, "BERAT", fmt_header)
-                sheet.write(elf_row, 14, "QTY", fmt_header)
-                sheet.write(elf_row, 15, "TOTAL", fmt_header)
-                elf_row += 1
+                r = start_row
+                c = start_col
+
+                sheet.merge_range(r, c, r, c + 3, label, fmt_label)
+                r += 1
+                sheet.write(r, c, "DESAIN", fmt_header)
+                sheet.write(r, c + 1, "BERAT", fmt_header)
+                sheet.write(r, c + 2, "QTY", fmt_header)
+                sheet.write(r, c + 3, "TOTAL", fmt_header)
+                r += 1
 
                 for desain_label, weight, qty, total in rows:
-                    sheet.write(elf_row, 12, desain_label, fmt_text_left)
-                    sheet.write(elf_row, 13, weight if weight != 0 else "-", fmt_float)
-                    sheet.write(elf_row, 14, qty if qty != 0 else '-', fmt_num)
-                    sheet.write(elf_row, 15, total if total != 0 else "-", fmt_num)
-                    elf_row += 1
+                    sheet.write(r, c, desain_label, fmt_text_left)
+                    sheet.write(r, c + 1, weight if weight != 0 else "-", fmt_float)
+                    sheet.write(r, c + 2, qty if qty != 0 else "-", fmt_num)
+                    sheet.write(r, c + 3, total if total != 0 else "-", fmt_num)
+                    r += 1
 
-                sheet.merge_range(elf_row, 12, elf_row, 13, "TOTAL", fmt_header)
-                sheet.write(elf_row, 14, qty_total if qty_total != 0 else "-", fmt_num_bold)
-                sheet.write(elf_row, 15, grand_total if grand_total != 0 else "-", fmt_num_bold)
-                elf_row += 2
+                sheet.merge_range(r, c, r, c + 1, "TOTAL", fmt_header)
+                sheet.write(r, c + 2, qty_total if qty_total != 0 else "-", fmt_num_bold)
+                sheet.write(r, c + 3, grand_total if grand_total != 0 else "-", fmt_num_bold)
+                r += 2
 
-                return elf_row
+                return r
 
-            elf_row = write_category_section(
-                sheet, elf_row, "LOKAL", "LOKAL", warehouse_id, current_max_date,
-                fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
-            )
+            for label, categ in (("LOKAL", "LOKAL"), ("SCRAP", "FUEL"), ("AVALAN", "AVALAN")):
+                side_row = write_category_section(
+                    sheet, side_row, side_col, label, categ, warehouse_id, current_max_date,
+                    fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
+                )
 
-            elf_row = write_category_section(
-                sheet, elf_row, "SCRAP", "FUEL", warehouse_id, current_max_date,
-                fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
-            )
+            # ---------------------------------------------------------
+            # 5. TOTAL BOX EXPORT
+            # ---------------------------------------------------------
+            sheet.merge_range(side_row, side_col, side_row, side_col + 1, "TOTAL BOX EXPORT", fmt_header)
+            sheet.write(side_row + 1, side_col, "CONT", fmt_header)
+            sheet.write(side_row + 1, side_col + 1,
+                        cont_gt_export if cont_gt_export != 0 else "-", fmt_cont_bold)
+            side_row += 3
 
-            elf_row = write_category_section(
-                sheet, elf_row, "AVALAN", "AVALAN", warehouse_id, current_max_date,
-                fmt_label, fmt_header, fmt_text_left, fmt_num, fmt_num_bold
-            )
+            # ---------------------------------------------------------
+            # 6. REPACK (BONGKAR / MENJADI)
+            # ---------------------------------------------------------
+            if repack_data:
+                bongkar, menjadi = repack_data[0]
+
+                if bongkar != "BONGKAR: -":
+                    sheet.write(side_row, side_col, bongkar, fmt_repack)
+                    side_row += 1
+
+                if menjadi != "MENJADI: -":
+                    sheet.write(side_row, side_col, menjadi, fmt_repack)
+                    side_row += 1
+
+            # tinggi baris mengikuti sisi yang paling panjang
+            elf_row = max(elf_row, side_row)
 
             _logger.warning(">>> SET ROW HEIGHT 15.01 sheet=%s rows=%s", sheet.get_name(), elf_row + 100)
             for r in range(0, elf_row + 100):
