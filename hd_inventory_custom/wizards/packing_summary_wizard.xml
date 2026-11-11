@@ -16,8 +16,8 @@
                             </div>
                             <field name="is_all_warehouse"/>
                         </div>
-                        <field name="report_type" widget="radio" options="{'horizontal': true}"/>
-                        <field name="ungroup_tonase_asli"/>
+                        <field name="report_type"/>
+                        <field name="ungroup_tonase_asli" invisible="report_type == 'transit'"/>
                     </group>
                     <group>
                         <label for="start_date" string="Date"/>
@@ -25,7 +25,7 @@
                             <field name="start_date" string="Date" required="True" widget="daterange" options="{'end_date_field': 'end_date'}" />
                             <field name="end_date" required="True" invisible="1"/>
                         </div>
-                        <field name="grade_value_ids" widget="many2many_tags" string="Total Grade"/>
+                        <field name="grade_value_ids" widget="many2many_tags" invisible="report_type != 'main'" string="Total Grade"/>
                     </group>
                 </group>
                 <footer>
