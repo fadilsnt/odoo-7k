@@ -608,6 +608,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             fmt_other_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_other_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_cont_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
+            fmt_cont_total = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00', 'bg_color': '#FABF8F'})
             fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter', 'num_format': '#,##0.0', 'bg_color': '#FABF8F'})
             fmt_total_center = workbook.add_format({'border': 1, 'bold': True, 'align': 'center', 'valign': 'vcenter'})
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
@@ -1592,7 +1593,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             sheet.merge_range(side_row, side_col, side_row, side_col + 1, "TOTAL BOX EXPORT", fmt_header)
             sheet.write(side_row + 1, side_col, "CONT", fmt_header)
             sheet.write(side_row + 1, side_col + 1,
-                        cont_gt_export if cont_gt_export != 0 else "-", fmt_cont_bold)
+                        cont_gt_export if cont_gt_export != 0 else "-", fmt_cont_total)
             side_row += 3
 
             # ---------------------------------------------------------
