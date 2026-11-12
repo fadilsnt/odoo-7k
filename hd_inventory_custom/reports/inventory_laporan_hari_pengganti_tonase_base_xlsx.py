@@ -584,7 +584,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
             fmt_text_center = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter'})
             fmt_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
             fmt_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0'})
-            fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter'})
+            fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter', 'num_format': '#,##0.0', 'bg_color': '#FABF8F'})
             fmt_total_center = workbook.add_format({'border': 1, 'bold': True, 'align': 'center', 'valign': 'vcenter'})
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'bold': True})
@@ -963,7 +963,7 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
                 grade_row_header = grade_start_row - 1
                 sheet.write(grade_row_header, grade_col_start, "PRODUK", fmt_header)
                 sheet.write(grade_row_header, grade_col_start + 1, "QTY", fmt_header)
-                sheet.write(grade_row_header, grade_col_start + 2, "TOTAL", fmt_header)
+                sheet.write(grade_row_header, grade_col_start + 2, "TOTAL (KG)", fmt_header)
                 sheet.write(grade_row_header, grade_col_start + 3, "GRADE", fmt_header)
 
                 grade_row = grade_start_row
@@ -1070,13 +1070,13 @@ class InventoryLaporanHariPenggantiTonase(models.AbstractModel):
 
                     total_all_grades += (qty * tonase)
 
-            sheet.write(grade_row, grade_col_start + 2, fmt_qty(total_all_grades), fmt_total)
+            sheet.write(grade_row, grade_col_start + 2, total_all_grades if total_all_grades else "-", fmt_total)
             sheet.write(grade_row, grade_col_start + 3, "TTL TONASE", fmt_header)
 
             # rata-rata per oven
             average_per_oven = round(total_all_grades / len(oven_list), 2) if oven_list else 0.00
 
-            sheet.write(grade_row + 1, grade_col_start + 2, fmt_qty(average_per_oven), fmt_total)
+            sheet.write(grade_row + 1, grade_col_start + 2, average_per_oven if average_per_oven else "-", fmt_total)
             sheet.write(grade_row + 1, grade_col_start + 3, "RATA-RATA", fmt_header)
 
 

@@ -608,7 +608,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             fmt_other_num = workbook.add_format({'border': 1, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_other_num_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
             fmt_cont_bold = workbook.add_format({'border': 1, 'bold': True, 'valign':'vcenter', 'align':'right','num_format':'#,##0.00'})
-            fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter'})
+            fmt_total = workbook.add_format({'border': 1, 'bold': True, 'align': 'right', 'valign': 'vcenter', 'num_format': '#,##0.0', 'bg_color': '#FABF8F'})
             fmt_total_center = workbook.add_format({'border': 1, 'bold': True, 'align': 'center', 'valign': 'vcenter'})
             fmt_grade_total = workbook.add_format({'border': 1, 'align': 'right', 'valign': 'vcenter'})
             fmt_grade = workbook.add_format({'border': 1, 'align': 'left', 'valign': 'vcenter', 'bold': True})
@@ -641,7 +641,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
 
             grade_col_start = last_col + 1
 
-            sheet.merge_range(0, 0, 0, warehouse_end_col, f"Gudang {warehouse_name}", fmt_label)
+            sheet.merge_range(0, 0, 0, warehouse_end_col, f"CABANG {warehouse_name}", fmt_label)
             if date_start_col == last_col:
                 sheet.write(0, last_col, f"TANGGAL : {date_today}", fmt_label)
             else:
@@ -1034,7 +1034,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 grade_row_header = grade_start_row - 1
                 sheet.write(grade_row_header, grade_col_start, "PRODUK", fmt_header)
                 sheet.write(grade_row_header, grade_col_start + 1, "QTY", fmt_header)
-                sheet.write(grade_row_header, grade_col_start + 2, "TOTAL", fmt_header)
+                sheet.write(grade_row_header, grade_col_start + 2, "TOTAL (KG)", fmt_header)
                 sheet.write(grade_row_header, grade_col_start + 3, "GRADE", fmt_header)
 
                 grade_row = grade_start_row
@@ -1144,13 +1144,13 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     elif category in ["LOKAL", "FUEL"]:
                         total_all_grades += qty if is_cl else qty * weight_lokal
 
-            sheet.write(grade_row, grade_col_start + 2, fmt_qty(total_all_grades), fmt_total)
+            sheet.write(grade_row, grade_col_start + 2, total_all_grades if total_all_grades else "-", fmt_total)
             sheet.write(grade_row, grade_col_start + 3, "TTL TONASE", fmt_header)
 
             # rata-rata per oven
             average_per_oven = round(total_all_grades / len(oven_list), 2) if oven_list else 0.00
 
-            sheet.write(grade_row + 1, grade_col_start + 2, fmt_qty(average_per_oven), fmt_total)
+            sheet.write(grade_row + 1, grade_col_start + 2, average_per_oven if average_per_oven else "-", fmt_total)
             sheet.write(grade_row + 1, grade_col_start + 3, "RATA-RATA", fmt_header)
 
 
@@ -1213,8 +1213,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                     categ = categ.parent_id
                 return False
 
-            # ================= BAHAN PACKING =================
-            sheet.merge_range(bp_row, 0, bp_row, 10, "BAHAN PACKING", fmt_label)
+            # ================= BAHAN PENOLONG =================
+            sheet.merge_range(bp_row, 0, bp_row, 10, "BAHAN PENOLONG", fmt_label)
             bp_row += 1
             sheet.write(bp_row, 0, "BARANG", fmt_header)
             sheet.merge_range(bp_row, 1, bp_row, 2, "AWAL", fmt_header)
