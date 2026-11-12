@@ -1208,7 +1208,8 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             
             def _is_categ_lainnya(categ):
                 while categ:
-                    if "lainnya" in (categ.name or "").strip().lower():
+                    c_name = (categ.name or "").strip().lower()
+                    if "lainnya" in c_name or "rafia" in c_name:
                         return True
                     
                     categ = categ.parent_id
