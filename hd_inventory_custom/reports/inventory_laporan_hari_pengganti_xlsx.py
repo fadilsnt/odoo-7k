@@ -619,7 +619,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
             avg_header = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
             avg_content = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
             avg_number = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
-            avg_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter'})
+            avg_total = workbook.add_format({'bold': True, 'align': 'center', 'valign': 'vcenter', 'bg_color': '#FABF8F'})
 
             autofit = _enable_autofit(sheet, font_size=FONT_SIZE, skip_prefixes=("BONGKAR:", "MENJADI:"))
             sheet.set_default_row(15.75)
@@ -772,7 +772,7 @@ class InventoryLaporanHariPenggantiXlsx(models.AbstractModel):
                 total_avg = round(sum(avg_values), 2) if avg_values else 0.0
                 total_kotak = round(sum(kotak_values), 2) if kotak_values else 0.0
  
-                sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_header)
+                sheet.write(rata_row, rata_col_label, "TOTAL RATA-RATA", avg_total)
                 sheet.write(rata_row, rata_col_value, total_avg if total_avg else "-", avg_total)
                 if is_kotak:
                     sheet.write(rata_row, rata_col_kotak, total_kotak if total_kotak else "-", avg_total)
