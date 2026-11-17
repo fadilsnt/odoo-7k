@@ -530,27 +530,47 @@ class PackingSummaryWizard(models.TransientModel):
 
                 UNION ALL
                 -- REPACK : K = barang jadi yang direpack, M = hasil repack
-                SELECT 'REP_K', srl.product_a_id, pt.uom_id, NULL, SUM(srl.qty_a), 0, NULL, NULL
+                SELECT 'REP_K', srl.product_a_id,
+                    COALESCE(smu.uom_id, pt.uom_id) AS uom_id,
+                    NULL, SUM(srl.qty_a), 0, NULL, NULL
                 FROM stock_repack_line srl
                     JOIN stock_picking sp ON sp.id = srl.picking_id
                     JOIN product_product pp ON pp.id = srl.product_a_id
                     JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                    LEFT JOIN LATERAL (
+                        SELECT sm.product_uom AS uom_id
+                        FROM stock_move sm
+                        WHERE sm.repack_line_id = srl.id
+                            AND sm.product_id = srl.product_a_id
+                        ORDER BY sm.id
+                        LIMIT 1
+                    ) smu ON TRUE
                 WHERE sp.location_dest_id IN (SELECT id FROM wh_loc)
                     AND sp.scheduled_date::date BETWEEN %(start_date)s AND %(end_date)s
                     AND sp.state NOT IN ('draft', 'cancel')
-                GROUP BY srl.product_a_id, pt.uom_id
+                GROUP BY srl.product_a_id, COALESCE(smu.uom_id, pt.uom_id)
 
                 UNION ALL
-                SELECT 'REP_M', sro.product_b_id, pt.uom_id, NULL, SUM(sro.qty_b), 0, NULL, NULL
+                SELECT 'REP_M', sro.product_b_id,
+                    COALESCE(smu.uom_id, pt.uom_id) AS uom_id,
+                    NULL, SUM(sro.qty_b), 0, NULL, NULL
                 FROM stock_repack_output sro
                     JOIN stock_repack_line srl ON srl.id = sro.repack_line_id
                     JOIN stock_picking sp ON sp.id = srl.picking_id
                     JOIN product_product pp ON pp.id = sro.product_b_id
                     JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                    LEFT JOIN LATERAL (
+                        SELECT sm.product_uom AS uom_id
+                        FROM stock_move sm
+                        WHERE sm.repack_output_id = sro.id
+                            AND sm.product_id = sro.product_b_id
+                        ORDER BY sm.id
+                        LIMIT 1
+                    ) smu ON TRUE
                 WHERE sp.location_dest_id IN (SELECT id FROM wh_loc)
                     AND sp.scheduled_date::date BETWEEN %(start_date)s AND %(end_date)s
                     AND sp.state NOT IN ('draft', 'cancel')
-                GROUP BY sro.product_b_id, pt.uom_id
+                GROUP BY sro.product_b_id, COALESCE(smu.uom_id, pt.uom_id)
 
                 UNION ALL
                 -- SALDO AWAL : forecasted qty sebelum tanggal awal filter
