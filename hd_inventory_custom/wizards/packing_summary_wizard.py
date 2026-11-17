@@ -34,6 +34,7 @@ class AutofitSheet:
         self._row_height = row_height
         self.widths = {}
         self.merges = []
+        self.fixed = {}
         self.max_row = -1
         worksheet.set_default_row(row_height)
 
@@ -76,18 +77,32 @@ class AutofitSheet:
         elif width:
             self.merges.append((first_col, last_col, width))
         return self._ws.merge_range(first_row, first_col, last_row, last_col, data, fmt)
+    
+    @staticmethod
+    def px_to_width(px):
+        return round(max(px - 5, 1) / 7.0, 2)
+
+    def set_fixed_width(self, first_col, last_col, width):
+        for c in range(first_col, last_col + 1):
+            self.fixed[c] = width
 
     def apply(self, min_width=3):
-        widths = dict(self.widths)
+        widths = {c: w for c, w in self.widths.items() if c not in self.fixed}
         for first, last, need in sorted(self.merges, key=lambda m: m[1] - m[0]):
-            cols = range(first, last + 1)
-            have = sum(max(min_width, widths.get(c, 0)) for c in cols)
+            cols = [c for c in range(first, last + 1) if c not in self.fixed]
+            if not cols:
+                continue
+            fixed_have = sum(self.fixed[c] for c in range(first, last + 1) if c in self.fixed)
+            have = fixed_have + sum(max(min_width, widths.get(c, 0)) for c in cols)
             if need > have:
                 extra = (need - have) / len(cols)
                 for c in cols:
                     widths[c] = max(min_width, widths.get(c, 0)) + extra
+
         for col, width in widths.items():
             self._ws.set_column(col, col, round(max(min_width, min(width, 255)), 2))
+        for col, width in self.fixed.items():
+            self._ws.set_column(col, col, width)
         for r in range(self.max_row + 1):
             self._ws.set_row(r, self._row_height)
 
@@ -1425,6 +1440,7 @@ class PackingSummaryWizard(models.TransientModel):
                             worksheet.write(i, 3 + n, value, qty_right)
                         i += 1
 
+                worksheet.set_fixed_width(4, 4 + 2 * len(days) - 1, 8)
                 worksheet.apply()
         
         elif self.report_type == 'transit':
@@ -1539,6 +1555,7 @@ class PackingSummaryWizard(models.TransientModel):
                         worksheet.merge_range(i, 0, i, 2, 'TOTAL KESELURUHAN', footer_center)
                         put(i, sum_rows(all_rows), qty_right_bold)
 
+                    worksheet.set_fixed_width(4, 4 + 2 * len(days) - 1, 8)
                     worksheet.apply()
 
         workbook.close()
